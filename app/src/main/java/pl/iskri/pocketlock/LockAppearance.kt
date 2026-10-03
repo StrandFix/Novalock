@@ -48,14 +48,12 @@ object LockAppearance {
     fun apply(root: View, context: Context) {
         val background = root.findViewById<ImageView>(R.id.bg_image)
         val dots = root.findViewById<LinearLayout>(R.id.dots_container)
-        val topBar = root.findViewById<LockTopBar>(R.id.top_bar)
         if (background != null) {
             applyBackground(background, context, root.width, root.height)
         }
         if (dots != null) {
             applyDots(dots, context, root.width, root.height)
         }
-        topBar?.applyAppearance()
     }
 
     private fun applyBackground(

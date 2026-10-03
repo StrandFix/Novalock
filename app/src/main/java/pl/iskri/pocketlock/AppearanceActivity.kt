@@ -17,14 +17,10 @@ import android.view.MotionEvent
 import android.view.ScaleGestureDetector
 import android.view.View
 import android.view.WindowInsets
-import android.widget.AdapterView
-import android.widget.ArrayAdapter
 import android.widget.Button
-import android.widget.CheckBox
 import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.SeekBar
-import android.widget.Spinner
 import android.widget.TextView
 import android.widget.Toast
 import kotlin.math.roundToInt
@@ -157,64 +153,7 @@ class AppearanceActivity : Activity() {
         findViewById<Button>(R.id.btnTabBackground).setOnClickListener { setTab(TAB_BACKGROUND) }
         findViewById<Button>(R.id.btnTabDots).setOnClickListener { setTab(TAB_DOTS) }
         findViewById<Button>(R.id.btnTabColors).setOnClickListener { setTab(TAB_COLORS) }
-        findViewById<Button>(R.id.btnTabTopBar).setOnClickListener { setTab(TAB_TOPBAR) }
         setTab(TAB_BACKGROUND)
-
-        val cbTopBar = findViewById<CheckBox>(R.id.cbTopBar)
-        cbTopBar.isChecked = Prefs.isTopBarEnabled(this)
-        updateTopBarOptions(cbTopBar.isChecked)
-        cbTopBar.setOnCheckedChangeListener { _, checked ->
-            Prefs.setTopBarEnabled(this, checked)
-            updateTopBarOptions(checked)
-            refreshPreview()
-        }
-
-        val cbTopBarClock = findViewById<CheckBox>(R.id.cbTopBarClock)
-        cbTopBarClock.isChecked = Prefs.isTopBarClockEnabled(this)
-        cbTopBarClock.setOnCheckedChangeListener { _, checked ->
-            Prefs.setTopBarClockEnabled(this, checked)
-            refreshPreview()
-        }
-
-        val clockFormatValues = arrayOf(
-            Prefs.CLOCK_FORMAT_SYSTEM,
-            Prefs.CLOCK_FORMAT_24,
-            Prefs.CLOCK_FORMAT_12
-        )
-        val clockFormatLabels = arrayOf(
-            getString(R.string.appearance_topbar_clock_system),
-            getString(R.string.appearance_topbar_clock_24),
-            getString(R.string.appearance_topbar_clock_12)
-        )
-        val clockFormatSpinner = findViewById<Spinner>(R.id.spTopBarClockFormat)
-        clockFormatSpinner.adapter = ArrayAdapter(
-            this,
-            R.layout.spinner_item,
-            clockFormatLabels
-        ).apply {
-            setDropDownViewResource(R.layout.spinner_dropdown_item)
-        }
-        val clockFormatIndex = clockFormatValues.indexOf(Prefs.topBarClockFormat(this))
-        clockFormatSpinner.setSelection(if (clockFormatIndex >= 0) clockFormatIndex else 0)
-        clockFormatSpinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
-            override fun onItemSelected(
-                parent: AdapterView<*>?,
-                view: View?,
-                position: Int,
-                id: Long
-            ) {
-                Prefs.setTopBarClockFormat(this@AppearanceActivity, clockFormatValues[position])
-                refreshPreview()
-            }
-
-            override fun onNothingSelected(parent: AdapterView<*>?) {
-            }
-        }
-
-        findViewById<Button>(R.id.btnResetTopBar).setOnClickListener {
-            Prefs.resetTopBar(this)
-            recreate()
-        }
 
         findViewById<Button>(R.id.btnChooseImage).setOnClickListener { pickImage() }
         findViewById<Button>(R.id.btnRemoveImage).setOnClickListener { removeImage() }
@@ -263,27 +202,17 @@ class AppearanceActivity : Activity() {
             if (newTab == TAB_DOTS) View.VISIBLE else View.GONE
         findViewById<View>(R.id.tab_colors).visibility =
             if (newTab == TAB_COLORS) View.VISIBLE else View.GONE
-        findViewById<View>(R.id.tab_topbar).visibility =
-            if (newTab == TAB_TOPBAR) View.VISIBLE else View.GONE
         findViewById<Button>(R.id.btnTabBackground).alpha =
             if (newTab == TAB_BACKGROUND) 1f else 0.5f
         findViewById<Button>(R.id.btnTabDots).alpha =
             if (newTab == TAB_DOTS) 1f else 0.5f
         findViewById<Button>(R.id.btnTabColors).alpha =
             if (newTab == TAB_COLORS) 1f else 0.5f
-        findViewById<Button>(R.id.btnTabTopBar).alpha =
-            if (newTab == TAB_TOPBAR) 1f else 0.5f
         findViewById<TextView>(R.id.tvHint).text = when (newTab) {
             TAB_BACKGROUND -> getString(R.string.appearance_hint_background)
             TAB_DOTS -> getString(R.string.appearance_hint_dots)
-            TAB_TOPBAR -> getString(R.string.appearance_hint_topbar)
             else -> getString(R.string.appearance_hint_colors)
         }
-    }
-
-    private fun updateTopBarOptions(enabled: Boolean) {
-        findViewById<View>(R.id.topbar_options).visibility =
-            if (enabled) View.VISIBLE else View.GONE
     }
 
     private fun layoutPreview() {
@@ -361,49 +290,6 @@ class AppearanceActivity : Activity() {
             Prefs.setDotCenter(this, Prefs.dotCenterX(this), value)
             refreshPreview()
         }
-
-        val topBar = findViewById<LinearLayout>(R.id.topbar_sliders)
-        addSlider(topBar, getString(R.string.appearance_topbar_size), 0.5f, 2f,
-            { Prefs.topBarScale(this) }) { value ->
-            Prefs.setTopBarScale(this, value)
-            refreshPreview()
-        }
-        addSlider(
-            parent = topBar,
-            labelText = getString(R.string.appearance_topbar_margin_top),
-            min = 0f,
-            max = 200f,
-            getValue = { Prefs.topBarMarginTop(this) },
-            format = { "${it.roundToInt()} dp" },
-            onChange = { value ->
-                Prefs.setTopBarMarginTop(this, value)
-                refreshPreview()
-            }
-        )
-        addSlider(
-            parent = topBar,
-            labelText = getString(R.string.appearance_topbar_margin_right),
-            min = 0f,
-            max = 200f,
-            getValue = { Prefs.topBarMarginRight(this) },
-            format = { "${it.roundToInt()} dp" },
-            onChange = { value ->
-                Prefs.setTopBarMarginRight(this, value)
-                refreshPreview()
-            }
-        )
-        addSlider(
-            parent = topBar,
-            labelText = getString(R.string.appearance_topbar_margin_left),
-            min = 0f,
-            max = 200f,
-            getValue = { Prefs.topBarMarginLeft(this) },
-            format = { "${it.roundToInt()} dp" },
-            onChange = { value ->
-                Prefs.setTopBarMarginLeft(this, value)
-                refreshPreview()
-            }
-        )
     }
 
     private fun buildColorEditors() {
@@ -413,20 +299,6 @@ class AppearanceActivity : Activity() {
         }
         buildColorEditor(findViewById(R.id.inactive_color_sliders), Prefs.dotInactiveColor(this)) {
             Prefs.setDotInactiveColor(this, it)
-            refreshPreview()
-        }
-        buildColorEditor(
-            findViewById(R.id.topbar_background_sliders),
-            Prefs.topBarBackgroundColor(this)
-        ) {
-            Prefs.setTopBarBackgroundColor(this, it)
-            refreshPreview()
-        }
-        buildColorEditor(
-            findViewById(R.id.topbar_text_sliders),
-            Prefs.topBarTextColor(this)
-        ) {
-            Prefs.setTopBarTextColor(this, it)
             refreshPreview()
         }
     }
@@ -692,7 +564,6 @@ class AppearanceActivity : Activity() {
         const val TAB_BACKGROUND = 0
         const val TAB_DOTS = 1
         const val TAB_COLORS = 2
-        const val TAB_TOPBAR = 3
         const val SLIDER_STEPS = 1000f
         const val MAX_DIMENSION = 4096
 

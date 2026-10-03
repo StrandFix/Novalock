@@ -383,17 +383,13 @@ class LockService : Service() {
             windowManager.updateViewLayout(view, params)
         } catch (_: Throwable) {
         }
-        // Keep the Android bars hidden while the lock view is moving. Showing them here would
-        // put the status bar over the transparent top bar before the animation reveals the app.
-        // They are restored in the animation callback, when the lock view is already invisible.
-        val showSystemBars = Prefs.barsVisible(this) ?: false
-        LockActivity.finishIfRunning(showSystemBars = false)
-        view.playExitAnimation {
-            if (showSystemBars) view.showSystemBars()
-            // The audio focus is abandoned in detachOverlay(), i.e. after the slide: it keeps
-            // media paused during the short (invisible) handoff to the app.
-            detachOverlay(unmuteMedia = true)
-        }
+        view.showSystemBars()
+        // The audio focus is abandoned in detachOverlay(), i.e. after the slide: it keeps
+        // media paused during the short (invisible) handoff to the app.
+        LockActivity.finishIfRunning(
+            showSystemBars = Prefs.barsVisible(this) ?: false
+        )
+        view.playExitAnimation { detachOverlay(unmuteMedia = true) }
     }
 
     /**
