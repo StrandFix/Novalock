@@ -18,6 +18,9 @@ object Prefs {
     const val ANIMATION_ZOOM_OUT = "zoom_out"
     const val ANIMATION_ZOOM_IN = "zoom_in"
     const val ANIMATION_FADE_SLIDE = "fade_slide"
+    const val CLOCK_FORMAT_SYSTEM = "system"
+    const val CLOCK_FORMAT_24 = "24"
+    const val CLOCK_FORMAT_12 = "12"
     private const val KEY_SOUND = "sound_status"
     private const val KEY_SOUND_ENABLED = "sound_enabled"
     private const val KEY_MEDIA_MUTED = "media_muted"
@@ -42,6 +45,15 @@ object Prefs {
     private const val KEY_DOT_CENTER_Y = "dot_center_y"
     private const val KEY_DOT_ACTIVE_COLOR = "dot_active_color"
     private const val KEY_DOT_INACTIVE_COLOR = "dot_inactive_color"
+    private const val KEY_TOPBAR_ENABLED = "topbar_enabled"
+    private const val KEY_TOPBAR_BG_COLOR = "topbar_bg_color"
+    private const val KEY_TOPBAR_TEXT_COLOR = "topbar_text_color"
+    private const val KEY_TOPBAR_SCALE = "topbar_scale"
+    private const val KEY_TOPBAR_CLOCK_ENABLED = "topbar_clock_enabled"
+    private const val KEY_TOPBAR_CLOCK_FORMAT = "topbar_clock_format"
+    private const val KEY_TOPBAR_MARGIN_TOP = "topbar_margin_top"
+    private const val KEY_TOPBAR_MARGIN_RIGHT = "topbar_margin_right"
+    private const val KEY_TOPBAR_MARGIN_LEFT = "topbar_margin_left"
 
     private fun sp(context: Context) =
         context.applicationContext.getSharedPreferences(FILE, Context.MODE_PRIVATE)
@@ -284,6 +296,84 @@ object Prefs {
         sp(context).edit().putInt(KEY_DOT_INACTIVE_COLOR, color).apply()
     }
 
+    /** Whether the custom top bar (time + battery) is shown on the lock screen. */
+    fun isTopBarEnabled(context: Context): Boolean =
+        sp(context).getBoolean(KEY_TOPBAR_ENABLED, false)
+
+    fun setTopBarEnabled(context: Context, enabled: Boolean) {
+        sp(context).edit().putBoolean(KEY_TOPBAR_ENABLED, enabled).apply()
+    }
+
+    /** Background colour of the top bar; fully transparent by default (alpha 0). */
+    fun topBarBackgroundColor(context: Context): Int =
+        sp(context).getInt(KEY_TOPBAR_BG_COLOR, 0x33000000)
+
+    fun setTopBarBackgroundColor(context: Context, color: Int) {
+        sp(context).edit().putInt(KEY_TOPBAR_BG_COLOR, color).apply()
+    }
+
+    fun topBarTextColor(context: Context): Int =
+        sp(context).getInt(KEY_TOPBAR_TEXT_COLOR, 0xFFFFFFFF.toInt())
+
+    fun setTopBarTextColor(context: Context, color: Int) {
+        sp(context).edit().putInt(KEY_TOPBAR_TEXT_COLOR, color).apply()
+    }
+
+    fun topBarScale(context: Context): Float = sp(context).getFloat(KEY_TOPBAR_SCALE, 1f)
+
+    fun setTopBarScale(context: Context, value: Float) {
+        sp(context).edit().putFloat(KEY_TOPBAR_SCALE, value).apply()
+    }
+
+    fun isTopBarClockEnabled(context: Context): Boolean =
+        sp(context).getBoolean(KEY_TOPBAR_CLOCK_ENABLED, true)
+
+    fun setTopBarClockEnabled(context: Context, enabled: Boolean) {
+        sp(context).edit().putBoolean(KEY_TOPBAR_CLOCK_ENABLED, enabled).apply()
+    }
+
+    fun topBarClockFormat(context: Context): String =
+        sp(context).getString(KEY_TOPBAR_CLOCK_FORMAT, CLOCK_FORMAT_SYSTEM)
+            ?: CLOCK_FORMAT_SYSTEM
+
+    fun setTopBarClockFormat(context: Context, format: String) {
+        sp(context).edit().putString(KEY_TOPBAR_CLOCK_FORMAT, format).apply()
+    }
+
+    fun topBarMarginTop(context: Context): Float =
+        sp(context).getFloat(KEY_TOPBAR_MARGIN_TOP, 0f)
+
+    fun setTopBarMarginTop(context: Context, value: Float) {
+        sp(context).edit().putFloat(KEY_TOPBAR_MARGIN_TOP, value).apply()
+    }
+
+    fun topBarMarginRight(context: Context): Float =
+        sp(context).getFloat(KEY_TOPBAR_MARGIN_RIGHT, 0f)
+
+    fun setTopBarMarginRight(context: Context, value: Float) {
+        sp(context).edit().putFloat(KEY_TOPBAR_MARGIN_RIGHT, value).apply()
+    }
+
+    fun topBarMarginLeft(context: Context): Float =
+        sp(context).getFloat(KEY_TOPBAR_MARGIN_LEFT, 0f)
+
+    fun setTopBarMarginLeft(context: Context, value: Float) {
+        sp(context).edit().putFloat(KEY_TOPBAR_MARGIN_LEFT, value).apply()
+    }
+
+    fun resetTopBar(context: Context) {
+        sp(context).edit()
+            .remove(KEY_TOPBAR_BG_COLOR)
+            .remove(KEY_TOPBAR_TEXT_COLOR)
+            .remove(KEY_TOPBAR_SCALE)
+            .remove(KEY_TOPBAR_CLOCK_ENABLED)
+            .remove(KEY_TOPBAR_CLOCK_FORMAT)
+            .remove(KEY_TOPBAR_MARGIN_TOP)
+            .remove(KEY_TOPBAR_MARGIN_RIGHT)
+            .remove(KEY_TOPBAR_MARGIN_LEFT)
+            .apply()
+    }
+
     fun resetAppearance(context: Context) {
         sp(context).edit()
             .remove(KEY_BG_SCALE)
@@ -295,6 +385,14 @@ object Prefs {
             .remove(KEY_DOT_CENTER_Y)
             .remove(KEY_DOT_ACTIVE_COLOR)
             .remove(KEY_DOT_INACTIVE_COLOR)
+            .remove(KEY_TOPBAR_BG_COLOR)
+            .remove(KEY_TOPBAR_TEXT_COLOR)
+            .remove(KEY_TOPBAR_SCALE)
+            .remove(KEY_TOPBAR_CLOCK_ENABLED)
+            .remove(KEY_TOPBAR_CLOCK_FORMAT)
+            .remove(KEY_TOPBAR_MARGIN_TOP)
+            .remove(KEY_TOPBAR_MARGIN_RIGHT)
+            .remove(KEY_TOPBAR_MARGIN_LEFT)
             .apply()
     }
 

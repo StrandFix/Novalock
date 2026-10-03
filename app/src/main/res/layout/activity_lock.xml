@@ -13,6 +13,13 @@
         android:scaleType="matrix"
         android:visibility="gone" />
 
+    <pl.iskri.pocketlock.LockTopBar
+        android:id="@+id/top_bar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="top"
+        android:visibility="gone" />
+
     <LinearLayout
         android:id="@+id/dots_container"
         android:layout_width="wrap_content"
