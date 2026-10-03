@@ -4,6 +4,7 @@ import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
+import android.os.Build
 import android.util.Log
 import android.view.WindowManager
 import java.lang.ref.WeakReference
@@ -66,7 +67,28 @@ class PauseActivity : Activity() {
             val activity = instance?.get() ?: return
             instance = null
             try {
-                activity.finish()
+                // The lock overlay still covers the display. Hide this window and make the
+                // handoff translucent before finishing, otherwise the app below can receive
+                // the framework's default horizontal task-enter animation.
+                activity.window?.let { window ->
+                    val attributes = window.attributes
+                    attributes.alpha = 0f
+                    window.attributes = attributes
+                }
+                try {
+                    activity.setTranslucent(true)
+                } catch (_: Throwable) {
+                }
+                try {
+                    activity.finish()
+                    if (Build.VERSION.SDK_INT >= 34) {
+                        activity.overrideActivityTransition(Activity.OVERRIDE_TRANSITION_CLOSE, 0, 0)
+                    } else {
+                        @Suppress("DEPRECATION")
+                        activity.overridePendingTransition(0, 0)
+                    }
+                } catch (_: Throwable) {
+                }
             } catch (_: Throwable) {
             }
         }

@@ -37,7 +37,7 @@ class LockTopBar @JvmOverloads constructor(
     private val clock: TextView
     private val battery: TextView
     private val batteryGroup: LinearLayout
-    private val chargingIcon: ImageView
+    private val batteryIcon: ImageView
     private val handler = Handler(Looper.getMainLooper())
     private var receiver: BroadcastReceiver? = null
     private var attached = false
@@ -64,9 +64,8 @@ class LockTopBar @JvmOverloads constructor(
             gravity = Gravity.END or Gravity.CENTER_VERTICAL
             includeFontPadding = false
         }
-        chargingIcon = ImageView(context).apply {
-            setImageResource(R.drawable.ic_charging)
-            visibility = View.GONE
+        batteryIcon = ImageView(context).apply {
+            setImageResource(R.drawable.ic_battery)
             contentDescription = null
             scaleType = ImageView.ScaleType.CENTER_INSIDE
         }
@@ -74,8 +73,8 @@ class LockTopBar @JvmOverloads constructor(
             orientation = HORIZONTAL
             gravity = Gravity.END or Gravity.CENTER_VERTICAL
             addView(
-                chargingIcon,
-                LayoutParams(dp(20f), dp(20f)).apply { marginEnd = dp(6f) }
+                batteryIcon,
+                LayoutParams(dp(23f), dp(23f)).apply { marginEnd = dp(2f) }
             )
             addView(battery)
         }
@@ -119,11 +118,13 @@ class LockTopBar @JvmOverloads constructor(
         updateChildLayout(showClock)
         clock.setTextColor(textColor)
         battery.setTextColor(textColor)
-        chargingIcon.imageTintList = ColorStateList.valueOf(textColor)
+        batteryIcon.imageTintList = ColorStateList.valueOf(textColor)
         clock.setTextSize(TypedValue.COMPLEX_UNIT_SP, CLOCK_SP * scale)
         battery.setTextSize(TypedValue.COMPLEX_UNIT_SP, BATTERY_SP * scale)
-        chargingIcon.layoutParams = LayoutParams(dp(20f * scale), dp(20f * scale)).apply {
-            marginEnd = dp(6f * scale)
+        val iconScale = ICON_SCALE_BASE + (scale - 1f).coerceAtLeast(0f) * ICON_SCALE_GROWTH
+        val iconSize = sp(BATTERY_SP * scale * iconScale)
+        batteryIcon.layoutParams = LayoutParams(iconSize, iconSize).apply {
+            marginEnd = dp(2f * scale)
         }
         val padH = dp(BASE_PADDING_H * scale)
         val padV = dp(BASE_PADDING_V * scale)
@@ -225,7 +226,9 @@ class LockTopBar @JvmOverloads constructor(
 
     private fun updateBattery() {
         battery.text = if (batteryLevel in 0..100) "$batteryLevel%" else ""
-        chargingIcon.visibility = if (batteryCharging) View.VISIBLE else View.GONE
+        batteryIcon.setImageResource(
+            if (batteryCharging) R.drawable.ic_charging else R.drawable.ic_battery
+        )
     }
 
     private fun dp(value: Float): Int =
@@ -235,10 +238,19 @@ class LockTopBar @JvmOverloads constructor(
             resources.displayMetrics
         ).roundToInt()
 
+    private fun sp(value: Float): Int =
+        TypedValue.applyDimension(
+            TypedValue.COMPLEX_UNIT_SP,
+            value,
+            resources.displayMetrics
+        ).roundToInt()
+
     private companion object {
         const val MINUTE_MS = 60_000L
         const val CLOCK_SP = 20f
         const val BATTERY_SP = 18f
+        const val ICON_SCALE_BASE = 0.9f
+        const val ICON_SCALE_GROWTH = 0.7f
         const val BASE_PADDING_H = 20f
         const val BASE_PADDING_V = 10f
     }
