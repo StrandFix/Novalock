@@ -54,6 +54,7 @@ object Prefs {
     private const val KEY_TOPBAR_MARGIN_TOP = "topbar_margin_top"
     private const val KEY_TOPBAR_MARGIN_RIGHT = "topbar_margin_right"
     private const val KEY_TOPBAR_MARGIN_LEFT = "topbar_margin_left"
+    private const val KEY_TOPBAR_DEFAULTS_VERSION = "topbar_defaults_version"
 
     private fun sp(context: Context) =
         context.applicationContext.getSharedPreferences(FILE, Context.MODE_PRIVATE)
@@ -300,13 +301,29 @@ object Prefs {
     fun isTopBarEnabled(context: Context): Boolean =
         sp(context).getBoolean(KEY_TOPBAR_ENABLED, false)
 
+    /** Apply the requested top-bar defaults once when upgrading an existing installation. */
+    fun applyTopBarDefaultsAfterUpdate(context: Context) {
+        val prefs = sp(context)
+        if (prefs.getInt(KEY_TOPBAR_DEFAULTS_VERSION, 0) >= 1) return
+        prefs.edit()
+            .putInt(KEY_TOPBAR_DEFAULTS_VERSION, 1)
+            .putBoolean(KEY_TOPBAR_ENABLED, false)
+            .putInt(KEY_TOPBAR_BG_COLOR, 0x00000000)
+            .putInt(KEY_TOPBAR_TEXT_COLOR, 0xFFFFFFFF.toInt())
+            .putFloat(KEY_TOPBAR_SCALE, 0.9f)
+            .putFloat(KEY_TOPBAR_MARGIN_TOP, 10f)
+            .putFloat(KEY_TOPBAR_MARGIN_RIGHT, 10f)
+            .putFloat(KEY_TOPBAR_MARGIN_LEFT, 10f)
+            .apply()
+    }
+
     fun setTopBarEnabled(context: Context, enabled: Boolean) {
         sp(context).edit().putBoolean(KEY_TOPBAR_ENABLED, enabled).apply()
     }
 
     /** Background colour of the top bar; fully transparent by default (alpha 0). */
     fun topBarBackgroundColor(context: Context): Int =
-        sp(context).getInt(KEY_TOPBAR_BG_COLOR, 0x33000000)
+        sp(context).getInt(KEY_TOPBAR_BG_COLOR, 0x00000000)
 
     fun setTopBarBackgroundColor(context: Context, color: Int) {
         sp(context).edit().putInt(KEY_TOPBAR_BG_COLOR, color).apply()
@@ -319,7 +336,7 @@ object Prefs {
         sp(context).edit().putInt(KEY_TOPBAR_TEXT_COLOR, color).apply()
     }
 
-    fun topBarScale(context: Context): Float = sp(context).getFloat(KEY_TOPBAR_SCALE, 1f)
+    fun topBarScale(context: Context): Float = sp(context).getFloat(KEY_TOPBAR_SCALE, 0.9f)
 
     fun setTopBarScale(context: Context, value: Float) {
         sp(context).edit().putFloat(KEY_TOPBAR_SCALE, value).apply()
@@ -341,21 +358,21 @@ object Prefs {
     }
 
     fun topBarMarginTop(context: Context): Float =
-        sp(context).getFloat(KEY_TOPBAR_MARGIN_TOP, 0f)
+        sp(context).getFloat(KEY_TOPBAR_MARGIN_TOP, 10f)
 
     fun setTopBarMarginTop(context: Context, value: Float) {
         sp(context).edit().putFloat(KEY_TOPBAR_MARGIN_TOP, value).apply()
     }
 
     fun topBarMarginRight(context: Context): Float =
-        sp(context).getFloat(KEY_TOPBAR_MARGIN_RIGHT, 0f)
+        sp(context).getFloat(KEY_TOPBAR_MARGIN_RIGHT, 10f)
 
     fun setTopBarMarginRight(context: Context, value: Float) {
         sp(context).edit().putFloat(KEY_TOPBAR_MARGIN_RIGHT, value).apply()
     }
 
     fun topBarMarginLeft(context: Context): Float =
-        sp(context).getFloat(KEY_TOPBAR_MARGIN_LEFT, 0f)
+        sp(context).getFloat(KEY_TOPBAR_MARGIN_LEFT, 10f)
 
     fun setTopBarMarginLeft(context: Context, value: Float) {
         sp(context).edit().putFloat(KEY_TOPBAR_MARGIN_LEFT, value).apply()
@@ -363,6 +380,7 @@ object Prefs {
 
     fun resetTopBar(context: Context) {
         sp(context).edit()
+            .remove(KEY_TOPBAR_ENABLED)
             .remove(KEY_TOPBAR_BG_COLOR)
             .remove(KEY_TOPBAR_TEXT_COLOR)
             .remove(KEY_TOPBAR_SCALE)
@@ -385,6 +403,7 @@ object Prefs {
             .remove(KEY_DOT_CENTER_Y)
             .remove(KEY_DOT_ACTIVE_COLOR)
             .remove(KEY_DOT_INACTIVE_COLOR)
+            .remove(KEY_TOPBAR_ENABLED)
             .remove(KEY_TOPBAR_BG_COLOR)
             .remove(KEY_TOPBAR_TEXT_COLOR)
             .remove(KEY_TOPBAR_SCALE)

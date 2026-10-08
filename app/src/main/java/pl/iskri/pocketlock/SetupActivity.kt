@@ -57,6 +57,7 @@ class SetupActivity : Activity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        Prefs.applyTopBarDefaultsAfterUpdate(this)
         setContentView(R.layout.activity_setup)
 
         findViewById<Button>(R.id.btnTabPermissions).setOnClickListener { setTab(TAB_PERMISSIONS) }

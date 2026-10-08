@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.graphics.Color
+import android.graphics.Rect
 import android.content.res.ColorStateList
 import android.os.BatteryManager
 import android.os.Build
@@ -15,7 +16,6 @@ import android.util.AttributeSet
 import android.util.TypedValue
 import android.view.Gravity
 import android.view.View
-import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
@@ -110,7 +110,7 @@ class LockTopBar @JvmOverloads constructor(
         visibility = if (enabled) View.VISIBLE else View.GONE
         if (!enabled) return
 
-        val scale = Prefs.topBarScale(context).coerceIn(0.5f, 2f)
+        val scale = Prefs.topBarScale(context).coerceIn(0.5f, 1.5f)
         setBackgroundColor(Prefs.topBarBackgroundColor(context))
         val textColor = Prefs.topBarTextColor(context)
         val showClock = Prefs.isTopBarClockEnabled(context)
@@ -121,15 +121,12 @@ class LockTopBar @JvmOverloads constructor(
         batteryIcon.imageTintList = ColorStateList.valueOf(textColor)
         clock.setTextSize(TypedValue.COMPLEX_UNIT_SP, CLOCK_SP * scale)
         battery.setTextSize(TypedValue.COMPLEX_UNIT_SP, BATTERY_SP * scale)
-        val iconScale = ICON_SCALE_BASE + (scale - 1f).coerceAtLeast(0f) * ICON_SCALE_GROWTH
-        val iconSize = sp(BATTERY_SP * scale * iconScale)
-        batteryIcon.layoutParams = LayoutParams(iconSize, iconSize).apply {
-            marginEnd = dp(2f * scale)
-        }
-        val padH = dp(BASE_PADDING_H * scale)
-        val padV = dp(BASE_PADDING_V * scale)
-        setPadding(padH, padV, padH, padV)
-        applyMargins()
+        setPadding(
+            dp(Prefs.topBarMarginLeft(context)),
+            dp(Prefs.topBarMarginTop(context)),
+            dp(Prefs.topBarMarginRight(context)),
+            0
+        )
         updateClock()
         readBatteryFromManager()
         updateBattery()
@@ -163,20 +160,6 @@ class LockTopBar @JvmOverloads constructor(
             LayoutParams.WRAP_CONTENT,
             if (showClock) 0f else 1f
         )
-    }
-
-    private fun applyMargins() {
-        val params = layoutParams as? FrameLayout.LayoutParams ?: return
-        val top = dp(Prefs.topBarMarginTop(context))
-        val right = dp(Prefs.topBarMarginRight(context))
-        val left = dp(Prefs.topBarMarginLeft(context))
-        if (params.topMargin == top && params.rightMargin == right && params.leftMargin == left) {
-            return
-        }
-        params.topMargin = top
-        params.rightMargin = right
-        params.leftMargin = left
-        layoutParams = params
     }
 
     private fun registerBattery() {
@@ -229,6 +212,26 @@ class LockTopBar @JvmOverloads constructor(
         batteryIcon.setImageResource(
             if (batteryCharging) R.drawable.ic_charging else R.drawable.ic_battery
         )
+        updateBatteryIconLayout()
+    }
+
+    private fun updateBatteryIconLayout() {
+        val text = battery.text.toString()
+        val textBounds = Rect()
+        battery.paint.getTextBounds(text, 0, text.length, textBounds)
+        val textHeight = textBounds.height().coerceAtLeast(1)
+        val drawable = batteryIcon.drawable
+        val widthRatio = if (drawable.intrinsicWidth > 0 && drawable.intrinsicHeight > 0) {
+            drawable.intrinsicWidth.toFloat() / drawable.intrinsicHeight
+        } else {
+            0.5f
+        }
+        batteryIcon.layoutParams = LayoutParams(
+            (textHeight * widthRatio).roundToInt(),
+            textHeight
+        ).apply {
+            marginEnd = dp(2f)
+        }
     }
 
     private fun dp(value: Float): Int =
@@ -238,20 +241,9 @@ class LockTopBar @JvmOverloads constructor(
             resources.displayMetrics
         ).roundToInt()
 
-    private fun sp(value: Float): Int =
-        TypedValue.applyDimension(
-            TypedValue.COMPLEX_UNIT_SP,
-            value,
-            resources.displayMetrics
-        ).roundToInt()
-
     private companion object {
         const val MINUTE_MS = 60_000L
         const val CLOCK_SP = 20f
         const val BATTERY_SP = 18f
-        const val ICON_SCALE_BASE = 0.9f
-        const val ICON_SCALE_GROWTH = 0.7f
-        const val BASE_PADDING_H = 20f
-        const val BASE_PADDING_V = 10f
     }
 }

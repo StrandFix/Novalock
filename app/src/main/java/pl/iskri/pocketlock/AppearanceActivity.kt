@@ -118,6 +118,7 @@ class AppearanceActivity : Activity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        Prefs.applyTopBarDefaultsAfterUpdate(this)
         setContentView(R.layout.activity_appearance)
 
         screenW = resources.displayMetrics.widthPixels
@@ -363,9 +364,9 @@ class AppearanceActivity : Activity() {
         }
 
         val topBar = findViewById<LinearLayout>(R.id.topbar_sliders)
-        addSlider(topBar, getString(R.string.appearance_topbar_size), 0.5f, 2f,
-            { Prefs.topBarScale(this) }) { value ->
-            Prefs.setTopBarScale(this, value)
+        addSlider(topBar, getString(R.string.appearance_topbar_size), 1f, 2f,
+            { (Prefs.topBarScale(this) + 0.5f).coerceIn(1f, 2f) }) { value ->
+            Prefs.setTopBarScale(this, value - 0.5f)
             refreshPreview()
         }
         addSlider(
