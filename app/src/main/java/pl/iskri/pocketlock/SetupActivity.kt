@@ -124,7 +124,7 @@ class SetupActivity : Activity() {
         cbCapture.isChecked = Prefs.isCaptureEnabled(this)
         cbCapture.setOnCheckedChangeListener { _, checked ->
             Prefs.setCaptureEnabled(this, checked)
-            if (checked) NovaCaptureService.resumeAfterUnlock()
+            NovaCaptureService.onCapturePreferenceChanged()
             updateStatus()
         }
 
