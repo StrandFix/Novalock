@@ -15,6 +15,10 @@ import android.view.accessibility.AccessibilityEvent
  * Images are kept in process memory only and not transmitted or saved to disk.
  */
 class NovaCaptureService : AccessibilityService() {
+    companion object {
+        @Volatile var isConnected: Boolean = false
+            private set
+    }
     private val handler = Handler(Looper.getMainLooper())
     private var busy = false
     private val sampler = object : Runnable {
@@ -54,6 +58,7 @@ class NovaCaptureService : AccessibilityService() {
                             }
                             override fun onFailure(errorCode: Int) {
                                 busy = false
+                                GamePreviewStore.noteCaptureFailure(errorCode)
                                 Log.d("NovaCapture", "Screenshot unavailable: " + errorCode)
                             }
                         })
@@ -62,13 +67,14 @@ class NovaCaptureService : AccessibilityService() {
                 busy = false
                 Log.w("NovaCapture", "Screenshot request failed", error)
             } finally {
-                handler.postDelayed(this, 4000L)
+                handler.postDelayed(this, 2500L)
             }
         }
     }
 
     override fun onServiceConnected() {
         super.onServiceConnected()
+        isConnected = true
         handler.removeCallbacks(sampler)
         handler.post(sampler)
     }
@@ -86,6 +92,7 @@ class NovaCaptureService : AccessibilityService() {
     override fun onInterrupt() = Unit
 
     override fun onDestroy() {
+        isConnected = false
         handler.removeCallbacks(sampler)
         super.onDestroy()
     }
