@@ -26,6 +26,7 @@ object Prefs {
     private const val KEY_MEDIA_MUTED = "media_muted"
     private const val KEY_VIBRATION_ENABLED = "vibration_enabled"
     private const val KEY_NOTIFICATION_ENABLED = "notification_enabled"
+    private const val KEY_NOVA_FLOAT_ENABLED = "nova_float_enabled"
     private const val KEY_SCREEN_OFF_SECONDS = "screen_off_seconds"
     private const val DEFAULT_SCREEN_OFF_SECONDS = 10
     private const val KEY_REMEMBER_PRESSES = "remember_presses"
@@ -82,10 +83,18 @@ object Prefs {
     }
 
     fun isNotificationEnabled(context: Context): Boolean =
-        sp(context).getBoolean(KEY_NOTIFICATION_ENABLED, true)
+        sp(context).getBoolean(KEY_NOTIFICATION_ENABLED, false)
 
     fun setNotificationEnabled(context: Context, enabled: Boolean) {
         sp(context).edit().putBoolean(KEY_NOTIFICATION_ENABLED, enabled).apply()
+    }
+
+    /** Gentle preview motion while the display is awake and showing the lock screen. */
+    fun isFloatEnabled(context: Context): Boolean =
+        sp(context).getBoolean(KEY_NOVA_FLOAT_ENABLED, false)
+
+    fun setFloatEnabled(context: Context, enabled: Boolean) {
+        sp(context).edit().putBoolean(KEY_NOVA_FLOAT_ENABLED, enabled).apply()
     }
 
     fun screenOffSeconds(context: Context): Int =
