@@ -32,7 +32,7 @@ class NovaLockContentView @JvmOverloads constructor(
     fun setDisplayAwake(awake: Boolean) {
         val preview = GamePreviewStore.preview()
         if (!awake || !isAttachedToWindow || !Prefs.isFloatEnabled(context) ||
-            preview.isHome || preview.bitmap == null) {
+            preview.isHome || preview.isSettings || preview.bitmap == null) {
             stopFloating()
             return
         }
@@ -75,6 +75,8 @@ class NovaLockContentView @JvmOverloads constructor(
         val snapshot = GamePreviewStore.preview()
         if (snapshot.isHome) {
             drawHomeMenu(canvas, w, h)
+        } else if (snapshot.isSettings) {
+            drawSettingsMenu(canvas, w, h)
         } else {
             canvas.save()
             // Apply motion to the preview card only, not unlock text or dots.
@@ -96,8 +98,11 @@ class NovaLockContentView @JvmOverloads constructor(
         p.typeface = Typeface.create("sans-serif", Typeface.NORMAL)
         p.color = Color.rgb(173, 186, 194)
         p.textSize = h * .027f
-        val subtitle = if (snapshot.isHome) "Unlock to return to HOME Menu."
-            else "Unlock to resume your game."
+        val subtitle = when {
+            snapshot.isHome -> "Unlock to return to HOME Menu."
+            snapshot.isSettings -> "Unlock to return to Settings."
+            else -> "Unlock to resume your game."
+        }
         canvas.drawText(subtitle, w / 2f, h * .825f, p)
     }
 
@@ -138,6 +143,53 @@ class NovaLockContentView @JvmOverloads constructor(
         p.textSize = h * .042f
         p.color = Color.rgb(237, 244, 245)
         canvas.drawText("HOME Menu", centerX, h * .555f, p)
+    }
+
+    /**
+     * Matches the HOME Menu visual treatment, but uses a crisp native gear.
+     * The Settings activity is never captured, which also avoids putting
+     * potentially sensitive device information on a lock screen.
+     */
+    private fun drawSettingsMenu(canvas: Canvas, w: Float, h: Float) {
+        val centerX = w / 2f
+        val centerY = h * .347f
+        val radius = min(w, h) * .112f
+
+        p.style = Paint.Style.FILL
+        p.color = Color.argb(90, 9, 15, 21)
+        canvas.drawCircle(centerX, centerY + 7f, radius + 8f, p)
+        p.style = Paint.Style.STROKE
+        p.strokeWidth = min(w, h) * .0045f
+        p.color = Color.rgb(231, 240, 243)
+        canvas.drawCircle(centerX, centerY, radius, p)
+        p.style = Paint.Style.FILL
+
+        // Eight small teeth around the central gear wheel.
+        canvas.save()
+        canvas.translate(centerX, centerY)
+        p.color = Color.rgb(239, 246, 247)
+        val toothHalf = radius * .105f
+        val toothTop = -radius * .49f
+        val toothBottom = -radius * .31f
+        for (index in 0 until 8) {
+            canvas.save()
+            canvas.rotate(index * 45f)
+            canvas.drawRoundRect(
+                RectF(-toothHalf, toothTop, toothHalf, toothBottom),
+                radius * .025f, radius * .025f, p
+            )
+            canvas.restore()
+        }
+        canvas.drawCircle(0f, 0f, radius * .36f, p)
+        p.color = Color.rgb(25, 36, 42)
+        canvas.drawCircle(0f, 0f, radius * .15f, p)
+        canvas.restore()
+
+        p.textAlign = Paint.Align.CENTER
+        p.typeface = Typeface.create("sans-serif-medium", Typeface.BOLD)
+        p.textSize = h * .042f
+        p.color = Color.rgb(237, 244, 245)
+        canvas.drawText("Settings", centerX, h * .555f, p)
     }
 
     private fun drawGamePreview(canvas: Canvas, w: Float, h: Float,
@@ -202,5 +254,13 @@ class NovaLockContentView @JvmOverloads constructor(
         p.color = Color.rgb(85, 170, 175)
         canvas.drawRoundRect(box, corner, corner, p)
         p.style = Paint.Style.FILL
+
+        // A tiny, static context label makes the game preview feel like a
+        // deliberate system UI card. It adds no work while the device sleeps.
+        p.textAlign = Paint.Align.CENTER
+        p.typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
+        p.textSize = h * .021f
+        p.color = Color.rgb(133, 176, 180)
+        canvas.drawText("READY TO RESUME", w / 2f, h * .649f, p)
     }
 }
