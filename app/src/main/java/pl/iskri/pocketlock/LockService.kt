@@ -412,8 +412,10 @@ class LockService : Service() {
         overlayView = null
         lockArmed = false
         isOverlayAttached = false
-        GamePreviewStore.unfreeze()
+        // The system may switch from overlay to LockActivity on wake.
+        // Keep the frozen preview during that handoff; only clear it at unlock.
         if (unmuteMedia) {
+            GamePreviewStore.unfreeze()
             lockedPackage = null
         }
         ScreenTimeout.cancel()
