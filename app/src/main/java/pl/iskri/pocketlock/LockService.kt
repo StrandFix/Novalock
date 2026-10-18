@@ -408,6 +408,7 @@ class LockService : Service() {
         }
         handler.removeCallbacks(audioCheckRunnable)
         PauseActivity.finishIfRunning()
+        if (unmuteMedia) GamePreviewStore.unfreeze()
         val view = overlayView ?: return
         overlayView = null
         lockArmed = false
@@ -415,7 +416,6 @@ class LockService : Service() {
         // The system may switch from overlay to LockActivity on wake.
         // Keep the frozen preview during that handoff; only clear it at unlock.
         if (unmuteMedia) {
-            GamePreviewStore.unfreeze()
             lockedPackage = null
         }
         ScreenTimeout.cancel()
