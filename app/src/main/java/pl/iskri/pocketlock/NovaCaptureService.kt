@@ -35,6 +35,13 @@ class NovaCaptureService : AccessibilityService() {
         fun resumeAfterUnlock() {
             instance?.get()?.scheduleCapture(2200L)
         }
+
+        fun onCapturePreferenceChanged() {
+            instance?.get()?.let { service ->
+                if (Prefs.isCaptureEnabled(service)) service.scheduleCapture(1400L)
+                else service.handler.removeCallbacks(service.sampler)
+            }
+        }
     }
 
     private val handler = Handler(Looper.getMainLooper())
@@ -44,7 +51,10 @@ class NovaCaptureService : AccessibilityService() {
 
     private fun scheduleCapture(afterMs: Long) {
         handler.removeCallbacks(sampler)
-        if (Prefs.isEnabled(this) && Prefs.isCaptureEnabled(this)) {
+        val power = getSystemService(Context.POWER_SERVICE) as PowerManager
+        if (power.isInteractive && !GamePreviewStore.isLocked &&
+            Prefs.isEnabled(this) && Prefs.isCaptureEnabled(this) &&
+            !NovaAppKinds.isCocoon(this, GamePreviewStore.currentPackage)) {
             handler.postDelayed(sampler, afterMs)
         }
     }
@@ -160,8 +170,9 @@ class NovaCaptureService : AccessibilityService() {
         if (!NovaAppKinds.isSafeApp(pkg)) return
         val previous = GamePreviewStore.currentPackage
         GamePreviewStore.observeForeground(this, pkg)
-        if (previous != GamePreviewStore.currentPackage &&
-            !NovaAppKinds.isCocoon(this, pkg) && awakeAndPlaying()) {
+        if (NovaAppKinds.isCocoon(this, pkg)) {
+            handler.removeCallbacks(sampler)
+        } else if (previous != GamePreviewStore.currentPackage && awakeAndPlaying()) {
             scheduleCapture(APP_SWITCH_DELAY_MS)
         }
     }
