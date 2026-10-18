@@ -141,6 +141,7 @@ class LockActivity : Activity() {
     private fun exit() {
         if (closing) return
         closing = true
+        GamePreviewStore.unfreeze()
         LockService.abandonAudioFocus(this)
         if (!silentFinish) {
             @Suppress("DEPRECATION")
