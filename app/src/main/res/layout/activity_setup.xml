@@ -82,6 +82,16 @@
                 android:layout_height="wrap_content"
                 android:orientation="vertical">
 
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Optional: enable game-preview service (Accessibility) to show a still screenshot. Otherwise the last app's icon appears."
+                    android:textColor="#FFAABBCC" android:paddingBottom="8dp" />
+                <Button android:id="@+id/btnNovaAccessibility"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Enable game preview (Accessibility)" />
+
                 <pl.iskri.pocketlock.WrappingRowLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content">
