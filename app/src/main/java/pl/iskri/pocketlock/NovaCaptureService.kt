@@ -54,7 +54,8 @@ class NovaCaptureService : AccessibilityService() {
         val power = getSystemService(Context.POWER_SERVICE) as PowerManager
         if (power.isInteractive && !GamePreviewStore.isLocked &&
             Prefs.isEnabled(this) && Prefs.isCaptureEnabled(this) &&
-            !NovaAppKinds.isCocoon(this, GamePreviewStore.currentPackage)) {
+            !NovaAppKinds.isCocoon(this, GamePreviewStore.currentPackage) &&
+            !NovaAppKinds.isSettings(this, GamePreviewStore.currentPackage)) {
             handler.postDelayed(sampler, afterMs)
         }
     }
@@ -87,7 +88,8 @@ class NovaCaptureService : AccessibilityService() {
         val usagePackage = latestUsageForeground()
         if (usagePackage != null) GamePreviewStore.observeForeground(this, usagePackage)
         val target = GamePreviewStore.currentPackage
-        if (target != null && !NovaAppKinds.isCocoon(this, target) && !busy) {
+        if (target != null && !NovaAppKinds.isCocoon(this, target) &&
+            !NovaAppKinds.isSettings(this, target) && !busy) {
             busy = true
             try {
                 takeScreenshot(Display.DEFAULT_DISPLAY, mainExecutor,
@@ -170,7 +172,9 @@ class NovaCaptureService : AccessibilityService() {
         if (!NovaAppKinds.isSafeApp(pkg)) return
         val previous = GamePreviewStore.currentPackage
         GamePreviewStore.observeForeground(this, pkg)
-        if (NovaAppKinds.isCocoon(this, pkg)) {
+        if (NovaAppKinds.isCocoon(this, pkg) ||
+            NovaAppKinds.isSettings(this, pkg)) {
+            // Neither Home nor Settings needs a screenshot or a pending timer.
             handler.removeCallbacks(sampler)
         } else if (previous != GamePreviewStore.currentPackage && awakeAndPlaying()) {
             scheduleCapture(APP_SWITCH_DELAY_MS)
