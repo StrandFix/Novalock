@@ -1,20 +1,25 @@
 package pl.iskri.pocketlock
 
+import android.content.Context
 import android.graphics.Bitmap
 import android.os.SystemClock
 
 /**
- * Only holds one recent frame in process memory; screenshots never leave
- * the device, nor are they persisted to storage.
+ * Only the most recent frame is kept in RAM. Nothing is stored or transmitted.
+ * The frozen preview persists while Android switches lock-screen windows.
  */
 object GamePreviewStore {
-    data class Preview(val packageName: String?, val bitmap: Bitmap?)
+    data class Preview(
+        val packageName: String?,
+        val bitmap: Bitmap?,
+        val isHome: Boolean = false
+    )
 
     @Volatile var isLocked: Boolean = false
         private set
     @Volatile var currentPackage: String? = null
         private set
-    @Volatile var captureStatus: String = "Waiting for the first game frame"
+    @Volatile var captureStatus: String = "Waiting for a game image"
         private set
 
     private var lastBitmap: Bitmap? = null
@@ -22,16 +27,15 @@ object GamePreviewStore {
     private var frameTakenAt: Long = 0L
     private var frozen = Preview(null, null)
 
-    private fun candidate(name: String?): Boolean =
-        !name.isNullOrBlank() &&
-        !name.startsWith("pl.iskri.pocketlock") &&
-        name != "com.android.systemui" &&
-        name != "android" &&
-        !name.contains("inputmethod", ignoreCase = true)
-
-    @Synchronized fun observeForeground(name: String) {
-        if (!isLocked && candidate(name)) {
+    @Synchronized fun observeForeground(context: Context, name: String) {
+        if (isLocked || !NovaAppKinds.isSafeApp(name)) return
+        if (currentPackage != name) {
             currentPackage = name
+            if (NovaAppKinds.isCocoon(context, name)) {
+                lastBitmap = null
+                capturedPackage = null
+                captureStatus = "Cocoon Home Menu - screenshots disabled"
+            }
         }
     }
 
@@ -40,22 +44,35 @@ object GamePreviewStore {
         lastBitmap = bitmap
         capturedPackage = name
         frameTakenAt = SystemClock.elapsedRealtime()
-        captureStatus = "Screenshot ready (" + name + ")"
+        captureStatus = "Screenshot ready: $name"
     }
 
     fun noteCaptureFailure(errorCode: Int) {
-        captureStatus = "Screenshot unavailable (Android code " + errorCode + ")"
+        captureStatus = "Screenshot blocked or unavailable (Android: $errorCode)"
     }
 
-    @Synchronized fun freeze(name: String?) {
+    @Synchronized fun freeze(context: Context, reportedPackage: String?) {
         if (isLocked) return
-        val candidateName = if (candidate(name)) name else currentPackage
-        // A screen-off event can report System UI rather than the running game.
-        // The screenshot service's last valid foreground app is safer then.
-        val selected = candidateName ?: capturedPackage
-        val frameFresh = SystemClock.elapsedRealtime() - frameTakenAt < 45000L
-        val picture = if (frameFresh && selected == capturedPackage) lastBitmap else null
-        frozen = Preview(selected, picture)
+        val observed = currentPackage
+        val reported = reportedPackage?.takeIf(NovaAppKinds::isSafeApp)
+        val isHomeReported = NovaAppKinds.isCocoon(context, reported)
+        val isHomeObserved = NovaAppKinds.isCocoon(context, observed)
+        val home = isHomeReported || (reported == null && isHomeObserved)
+        val currentFrameFresh = SystemClock.elapsedRealtime() - frameTakenAt < 90000L
+        val picturePackage = capturedPackage
+
+        // UsageStats can lag for full-screen emulators. Prefer the latest actual
+        // screenshot when Accessibility still identifies that emulator as current.
+        val selected = when {
+            home -> reported ?: observed
+            currentFrameFresh && picturePackage != null &&
+                observed == picturePackage -> picturePackage
+            reported != null -> reported
+            else -> observed ?: picturePackage
+        }
+        val frame = if (!home && currentFrameFresh &&
+            selected == picturePackage) lastBitmap else null
+        frozen = Preview(selected, frame, home || NovaAppKinds.isCocoon(context, selected))
         isLocked = true
     }
 
