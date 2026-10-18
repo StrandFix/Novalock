@@ -25,3 +25,11 @@ GitHub Actions debug APKs are signed with an ephemeral debug key. Uninstall the 
 5. Disable screenshot capture in Options; verify no game screenshots while the lock continues functioning.
 
 This APK is a test build; battery usage and emulator behavior require validation on physical Retroid Pocket Nova.
+
+## V4 finishing touches (Novalock)
+- Launcher and settings name are **Novalock** without "Test".
+- Optional **Floating game preview** toggle (Off by default). A ~7dp gentle vertical drift; only animates the screenshot card while a visible lock screen is awake. Stops on screen-off, lock-view removal, pause and unlock; Cocoon HOME and text/dots never float.
+- Quiet, no-badge foreground service notification channel, and app notification preference defaults Off. Android may still show an indicator for an active foreground service; the **Hide system notification** button opens Novalock's system notification settings to disable app notifications without disabling the service.
+- Screenshot sampling never schedules while sleeping, locked, in Cocoon, or disabled. One frame is retained in RAM only.
+- These choices minimize additional battery use but do **not** guarantee zero device power draw while sleeping: Android still maintains the foreground lock service and might wake it for lifecycle events.
+- Physical Retroid Pocket Nova battery testing and visual verification still required.
