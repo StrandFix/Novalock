@@ -277,7 +277,7 @@ object Prefs {
 
     fun dotCenterX(context: Context): Float = sp(context).getFloat(KEY_DOT_CENTER_X, 0.5f)
 
-    fun dotCenterY(context: Context): Float = sp(context).getFloat(KEY_DOT_CENTER_Y, 0.5f)
+    fun dotCenterY(context: Context): Float = sp(context).getFloat(KEY_DOT_CENTER_Y, 0.90f)
 
     fun setDotCenter(context: Context, x: Float, y: Float) {
         sp(context).edit().putFloat(KEY_DOT_CENTER_X, x).putFloat(KEY_DOT_CENTER_Y, y).apply()
