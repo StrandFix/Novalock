@@ -1,57 +1,54 @@
 <?xml version="1.0" encoding="utf-8"?>
 <pl.iskri.pocketlock.LockOverlayView xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/lock_root"
-    android:layout_width="match_parent"
-    android:layout_height="match_parent"
+    android:layout_width="match_parent" android:layout_height="match_parent"
     android:background="@android:color/black">
 
-    <ImageView
-        android:id="@+id/bg_image"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:contentDescription="@null"
-        android:scaleType="matrix"
-        android:visibility="gone" />
+    <pl.iskri.pocketlock.NovaLockBackground
+        android:layout_width="match_parent" android:layout_height="match_parent" />
 
-    <pl.iskri.pocketlock.LockTopBar
-        android:id="@+id/top_bar"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_gravity="top"
-        android:visibility="gone" />
+    <ImageView android:id="@+id/bg_image" android:layout_width="match_parent"
+        android:layout_height="match_parent" android:contentDescription="@null"
+        android:scaleType="matrix" android:visibility="gone" />
 
-    <LinearLayout
-        android:id="@+id/dots_container"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_gravity="center"
+    <FrameLayout android:id="@+id/preview_frame"
+        android:layout_width="wrap_content" android:layout_height="wrap_content"
+        android:layout_gravity="top|center_horizontal"
+        android:background="@drawable/nova_preview_card"
+        android:clipToOutline="true" android:elevation="10dp">
+        <ImageView android:id="@+id/preview_image"
+            android:layout_width="match_parent" android:layout_height="match_parent"
+            android:contentDescription="Preview of paused app" android:scaleType="fitCenter" />
+    </FrameLayout>
+
+    <TextView android:id="@+id/nova_instruction"
+        android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:text="Press the same button three times."
+        android:gravity="center" android:textColor="#FFF7F9FC"
+        android:textStyle="bold" android:fontFamily="sans-serif"
+        android:includeFontPadding="false" />
+
+    <TextView android:id="@+id/nova_subtitle"
+        android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:text="Unlock to resume your game."
+        android:gravity="center" android:textColor="#FFB8C3CC"
+        android:fontFamily="sans-serif" android:includeFontPadding="false" />
+
+    <pl.iskri.pocketlock.LockTopBar android:id="@+id/top_bar"
+        android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:layout_gravity="top" android:visibility="gone" />
+
+    <LinearLayout android:id="@+id/dots_container" android:layout_width="wrap_content"
+        android:layout_height="wrap_content" android:layout_gravity="center"
         android:orientation="horizontal">
-
-        <ImageView
-            android:id="@+id/dot1"
-            android:layout_width="30dp"
-            android:layout_height="30dp"
-            android:layout_marginStart="16dp"
-            android:layout_marginEnd="16dp"
-            android:contentDescription="@null"
-            android:src="@drawable/dot" />
-
-        <ImageView
-            android:id="@+id/dot2"
-            android:layout_width="30dp"
-            android:layout_height="30dp"
-            android:layout_marginStart="16dp"
-            android:layout_marginEnd="16dp"
-            android:contentDescription="@null"
-            android:src="@drawable/dot" />
-
-        <ImageView
-            android:id="@+id/dot3"
-            android:layout_width="30dp"
-            android:layout_height="30dp"
-            android:layout_marginStart="16dp"
-            android:layout_marginEnd="16dp"
-            android:contentDescription="@null"
-            android:src="@drawable/dot" />
+        <ImageView android:id="@+id/dot1" android:layout_width="30dp" android:layout_height="30dp"
+            android:layout_marginStart="16dp" android:layout_marginEnd="16dp"
+            android:contentDescription="@null" android:src="@drawable/dot" />
+        <ImageView android:id="@+id/dot2" android:layout_width="30dp" android:layout_height="30dp"
+            android:layout_marginStart="16dp" android:layout_marginEnd="16dp"
+            android:contentDescription="@null" android:src="@drawable/dot" />
+        <ImageView android:id="@+id/dot3" android:layout_width="30dp" android:layout_height="30dp"
+            android:layout_marginStart="16dp" android:layout_marginEnd="16dp"
+            android:contentDescription="@null" android:src="@drawable/dot" />
     </LinearLayout>
 </pl.iskri.pocketlock.LockOverlayView>
