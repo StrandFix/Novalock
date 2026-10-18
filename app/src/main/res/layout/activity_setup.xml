@@ -297,6 +297,15 @@
                     android:textSize="15sp" />
 
                 <CheckBox
+                    android:id="@+id/cbNovaFloat"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:text="Floating game preview (only while lock screen is awake)"
+                    android:textColor="@android:color/white"
+                    android:textSize="16sp" />
+
+                <CheckBox
                     android:id="@+id/cbSound"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
