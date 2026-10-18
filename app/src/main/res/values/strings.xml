@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">NovaLock Test</string>
+    <string name="app_name">Novalock</string>
     <string name="notification_channel">Screen lock</string>
-    <string name="notification_title">Pocket Lock is active</string>
+    <string name="notification_title">Novalock is active</string>
     <string name="notification_text">The lock screen appears when the display wakes up.</string>
 
-    <string name="setup_title">Pocket Lock</string>
+    <string name="setup_title">Novalock</string>
     <string name="setup_subtitle">Lock screen: 3 presses, just like on the Switch</string>
 
     <string name="tab_permissions">Permissions</string>
@@ -24,7 +24,7 @@
     <string name="touch_hint">When off, only buttons and triggers unlock the screen — tapping the screen does nothing.</string>
     <string name="checkbox_remember_presses">Remember dots after screen off</string>
     <string name="remember_presses_hint">Keeps the already-pressed dots when the screen turns off, so you continue instead of starting over. Off by default.</string>
-    <string name="checkbox_notification">Show notification</string>
+    <string name="checkbox_notification">Show service notification (Android may still display a system indicator)</string>
     <string name="yes">OK</string>
     <string name="no">missing</string>
     <string name="instructions_title">Setup instructions</string>
