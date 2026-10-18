@@ -8,10 +8,6 @@ import android.graphics.drawable.BitmapDrawable
 import android.util.TypedValue
 import android.view.View
 import android.widget.ImageView
-import android.widget.FrameLayout
-import android.widget.TextView
-import android.view.Gravity
-import android.widget.ImageView.ScaleType
 import android.widget.LinearLayout
 import java.io.File
 import kotlin.math.max
@@ -60,54 +56,6 @@ object LockAppearance {
             applyDots(dots, context, root.width, root.height)
         }
         topBar?.applyAppearance()
-        applyNovaPreview(root, context)
-    }
-
-    private fun applyNovaPreview(root: View, context: Context) {
-        val frame = root.findViewById<FrameLayout>(R.id.preview_frame) ?: return
-        val image = root.findViewById<ImageView>(R.id.preview_image) ?: return
-        val headline = root.findViewById<TextView>(R.id.nova_instruction) ?: return
-        val subtitle = root.findViewById<TextView>(R.id.nova_subtitle) ?: return
-        val w = root.width
-        val h = root.height
-        if (w <= 0 || h <= 0) return
-
-        val snapshot = GamePreviewStore.preview()
-        val bmp = snapshot.bitmap
-        if (bmp != null && !bmp.isRecycled) {
-            image.setImageBitmap(bmp)
-            image.scaleType = ScaleType.FIT_CENTER
-            image.setPadding(0, 0, 0, 0)
-        } else {
-            val fallback = try {
-                snapshot.packageName?.let { context.packageManager.getApplicationIcon(it) }
-            } catch (_: Exception) { null }
-            image.setImageDrawable(fallback ?: context.getDrawable(android.R.drawable.sym_def_app_icon))
-            image.scaleType = ScaleType.FIT_CENTER
-        }
-
-        val aspect = if (bmp != null && !bmp.isRecycled) bmp.width.toFloat() / bmp.height else 4f / 3f
-        val frameW = minOf(w * .76f, h * .55f * aspect).toInt().coerceAtLeast(1)
-        val frameH = (frameW / aspect).toInt().coerceAtLeast(1)
-        val top = (h * .345f - frameH / 2f).toInt().coerceAtLeast(dp(context, 12f))
-        frame.layoutParams = FrameLayout.LayoutParams(frameW, frameH, Gravity.TOP or Gravity.CENTER_HORIZONTAL).apply {
-            topMargin = top
-        }
-        if (bmp == null) {
-            val padX = (frameW * .29f).toInt()
-            val padY = (frameH * .24f).toInt()
-            image.setPadding(padX, padY, padX, padY)
-        }
-
-        val titleHeight = (h * .085f).toInt().coerceAtLeast(dp(context, 50f))
-        headline.layoutParams = FrameLayout.LayoutParams((w * .94f).toInt(), titleHeight,
-            Gravity.TOP or Gravity.CENTER_HORIZONTAL).apply { topMargin = (h * .685f).toInt() }
-        headline.setTextSize(TypedValue.COMPLEX_UNIT_PX, minOf(w * .038f, h * .057f))
-        subtitle.layoutParams = FrameLayout.LayoutParams((w * .94f).toInt(),
-            (h * .07f).toInt(), Gravity.TOP or Gravity.CENTER_HORIZONTAL).apply {
-            topMargin = (h * .775f).toInt()
-        }
-        subtitle.setTextSize(TypedValue.COMPLEX_UNIT_PX, minOf(w * .023f, h * .034f))
     }
 
     private fun applyBackground(
