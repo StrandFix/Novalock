@@ -40,6 +40,7 @@ class LockActivity : Activity() {
     }
 
     override fun onDestroy() {
+        if (::lockView.isInitialized) lockView.setDisplayAwake(false)
         Log.i("PocketLock", "LockActivity destroyed")
         val callback = destroyCallback
         destroyCallback = null
@@ -51,6 +52,7 @@ class LockActivity : Activity() {
     }
 
     override fun onPause() {
+        if (::lockView.isInitialized) lockView.setDisplayAwake(false)
         super.onPause()
         Log.i("PocketLock", "LockActivity paused")
     }
@@ -69,6 +71,7 @@ class LockActivity : Activity() {
         lockView.visibility = if (LockService.isOverlayAttached) View.INVISIBLE else View.VISIBLE
         goImmersive()
         lockView.requestFocus()
+        lockView.setDisplayAwake(isInteractive() && !LockService.isOverlayAttached)
     }
 
     override fun onWindowFocusChanged(hasFocus: Boolean) {
@@ -84,6 +87,7 @@ class LockActivity : Activity() {
         setIntent(intent)
         lockView.visibility = if (LockService.isOverlayAttached) View.INVISIBLE else View.VISIBLE
         goImmersive()
+        lockView.setDisplayAwake(isInteractive() && !LockService.isOverlayAttached)
     }
 
     @Suppress("OVERRIDE_DEPRECATION")
@@ -141,6 +145,7 @@ class LockActivity : Activity() {
     private fun exit() {
         if (closing) return
         closing = true
+        lockView.setDisplayAwake(false)
         GamePreviewStore.unfreeze()
         LockService.abandonAudioFocus(this)
         if (!silentFinish) {
@@ -181,6 +186,15 @@ class LockActivity : Activity() {
         private var instance: WeakReference<LockActivity>? = null
         private var destroyCallback: (() -> Unit)? = null
 
+        /** Called by the service on SCREEN_ON/OFF; never animates while sleeping. */
+        fun setPreviewAwake(awake: Boolean) {
+            try {
+                instance?.get()?.lockView?.setDisplayAwake(
+                    awake && !LockService.isOverlayAttached
+                )
+            } catch (_: Throwable) {}
+        }
+
         fun launch(context: Context) {
             val intent = Intent(context, LockActivity::class.java)
             intent.addFlags(
@@ -219,6 +233,7 @@ class LockActivity : Activity() {
                 // frame (a copy of the lock screen) could otherwise flash when the overlay
                 // slides away and reveals the app underneath.
                 try {
+                    activity.lockView.setDisplayAwake(false)
                     activity.lockView.visibility = View.INVISIBLE
                 } catch (_: Throwable) {
                 }
