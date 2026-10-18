@@ -65,6 +65,9 @@ class SetupActivity : Activity() {
 
         findViewById<ImageButton>(R.id.btnInfo).setOnClickListener { showInstructions() }
 
+        findViewById<Button>(R.id.btnNovaAccessibility).setOnClickListener {
+            startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
+        }
         findViewById<Button>(R.id.btnOverlay).setOnClickListener {
             try {
                 startActivity(
