@@ -33,3 +33,9 @@ This APK is a test build; battery usage and emulator behavior require validation
 - Screenshot sampling never schedules while sleeping, locked, in Cocoon, or disabled. One frame is retained in RAM only.
 - These choices minimize additional battery use but do **not** guarantee zero device power draw while sleeping: Android still maintains the foreground lock service and might wake it for lifecycle events.
 - Physical Retroid Pocket Nova battery testing and visual verification still required.
+
+## V5 — Settings, with no screenshot
+- Android Settings and permission-related system panels show the same circular minimalist design as HOME, but with a white gear and the heading **Settings**. The subtitle reads **Unlock to return to Settings.**
+- Screenshots and screenshot sampling are disabled in Settings, avoiding sensitive device information on the lock screen and reducing work.
+- Game preview includes a small, still **READY TO RESUME** label under the card; the game preview, optional float animation, Cocoon HOME layout, buttons and dots otherwise remain the same.
+- Existing foreground service remains for reliable locking. Battery impact is not claimed to be literally zero; Android device testing is required.
