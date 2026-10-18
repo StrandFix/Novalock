@@ -11,28 +11,10 @@
         android:layout_height="match_parent" android:contentDescription="@null"
         android:scaleType="matrix" android:visibility="gone" />
 
-    <FrameLayout android:id="@+id/preview_frame"
-        android:layout_width="wrap_content" android:layout_height="wrap_content"
-        android:layout_gravity="top|center_horizontal"
-        android:background="@drawable/nova_preview_card"
-        android:clipToOutline="true" android:elevation="10dp">
-        <ImageView android:id="@+id/preview_image"
-            android:layout_width="match_parent" android:layout_height="match_parent"
-            android:contentDescription="Preview of paused app" android:scaleType="fitCenter" />
-    </FrameLayout>
-
-    <TextView android:id="@+id/nova_instruction"
-        android:layout_width="match_parent" android:layout_height="wrap_content"
-        android:text="Press the same button three times."
-        android:gravity="center" android:textColor="#FFF7F9FC"
-        android:textStyle="bold" android:fontFamily="sans-serif"
-        android:includeFontPadding="false" />
-
-    <TextView android:id="@+id/nova_subtitle"
-        android:layout_width="match_parent" android:layout_height="wrap_content"
-        android:text="Unlock to resume your game."
-        android:gravity="center" android:textColor="#FFB8C3CC"
-        android:fontFamily="sans-serif" android:includeFontPadding="false" />
+    <pl.iskri.pocketlock.NovaLockContentView
+        android:id="@+id/nova_content"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
 
     <pl.iskri.pocketlock.LockTopBar android:id="@+id/top_bar"
         android:layout_width="match_parent" android:layout_height="wrap_content"
