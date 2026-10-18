@@ -58,6 +58,7 @@ class SetupActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         Prefs.applyTopBarDefaultsAfterUpdate(this)
+        Prefs.applyNovaDotDefaultsAfterUpdate(this)
         setContentView(R.layout.activity_setup)
 
         findViewById<Button>(R.id.btnTabPermissions).setOnClickListener { setTab(TAB_PERMISSIONS) }
@@ -117,6 +118,14 @@ class SetupActivity : Activity() {
 
         findViewById<Button>(R.id.btnButtons).setOnClickListener {
             startActivity(Intent(this, ButtonsActivity::class.java))
+        }
+
+        val cbCapture = findViewById<CheckBox>(R.id.cbNovaCapture)
+        cbCapture.isChecked = Prefs.isCaptureEnabled(this)
+        cbCapture.setOnCheckedChangeListener { _, checked ->
+            Prefs.setCaptureEnabled(this, checked)
+            if (checked) NovaCaptureService.resumeAfterUnlock()
+            updateStatus()
         }
 
         val cbSound = findViewById<CheckBox>(R.id.cbSound)
