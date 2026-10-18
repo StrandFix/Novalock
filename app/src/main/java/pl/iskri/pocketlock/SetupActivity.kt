@@ -128,6 +128,12 @@ class SetupActivity : Activity() {
             updateStatus()
         }
 
+        val cbFloat = findViewById<CheckBox>(R.id.cbNovaFloat)
+        cbFloat.isChecked = Prefs.isFloatEnabled(this)
+        cbFloat.setOnCheckedChangeListener { _, checked ->
+            Prefs.setFloatEnabled(this, checked)
+        }
+
         val cbSound = findViewById<CheckBox>(R.id.cbSound)
         cbSound.isChecked = Prefs.isSoundEnabled(this)
         cbSound.setOnCheckedChangeListener { _, checked -> Prefs.setSoundEnabled(this, checked) }
