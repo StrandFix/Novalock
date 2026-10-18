@@ -70,7 +70,14 @@ class LockOverlayView @JvmOverloads constructor(
         initSound()
     }
 
+    /** Explicit wake/sleep lifecycle for the decorative animation. */
+    fun setDisplayAwake(awake: Boolean) {
+        findViewById<NovaLockContentView>(R.id.nova_content)
+            ?.setDisplayAwake(awake && interactive)
+    }
+
     override fun onDetachedFromWindow() {
+        setDisplayAwake(false)
         soundPool?.release()
         soundPool = null
         pressSoundId = 0
@@ -210,6 +217,7 @@ class LockOverlayView @JvmOverloads constructor(
     }
 
     fun playExitAnimation(onEnd: () -> Unit) {
+        setDisplayAwake(false)
         if (exitStarted) return
         exitStarted = true
         if (DISABLE_EXIT_ANIMATION) {
