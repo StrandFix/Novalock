@@ -443,6 +443,21 @@
                     android:textSize="16sp"
                     android:visibility="gone" />
 
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="14dp"
+                    android:text="Status-bar icon: Android can still show a service indicator. If so, hide Novalock notifications in Android settings; the lock still works."
+                    android:textColor="#FFAAB5C0"
+                    android:textSize="13sp" />
+
+                <Button
+                    android:id="@+id/btnHideSystemNotification"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:text="Hide system notification" />
+
                 <Button
                     android:id="@+id/btnAppearance"
                     android:layout_width="wrap_content"
