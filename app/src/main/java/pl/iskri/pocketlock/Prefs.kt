@@ -40,6 +40,8 @@ object Prefs {
     private const val KEY_BG_OFFSET_X = "bg_offset_x"
     private const val KEY_BG_OFFSET_Y = "bg_offset_y"
     private const val KEY_DOT_SCALE = "dot_scale"
+    private const val KEY_NOVA_DOT_MIGRATION = "nova_dot_defaults_v3"
+    private const val KEY_CAPTURE_ENABLED = "nova_capture_enabled"
     private const val KEY_DOT_SPACING = "dot_spacing"
     private const val KEY_DOT_CENTER_X = "dot_center_x"
     private const val KEY_DOT_CENTER_Y = "dot_center_y"
@@ -263,16 +265,43 @@ object Prefs {
         sp(context).edit().putFloat(KEY_BG_OFFSET_X, x).putFloat(KEY_BG_OFFSET_Y, y).apply()
     }
 
-    fun dotScale(context: Context): Float = sp(context).getFloat(KEY_DOT_SCALE, 1.2f)
+    fun dotScale(context: Context): Float = sp(context).getFloat(KEY_DOT_SCALE, 0.90f)
 
     fun setDotScale(context: Context, value: Float) {
         sp(context).edit().putFloat(KEY_DOT_SCALE, value).apply()
     }
 
-    fun dotSpacing(context: Context): Float = sp(context).getFloat(KEY_DOT_SPACING, 1f)
+    fun dotSpacing(context: Context): Float = sp(context).getFloat(KEY_DOT_SPACING, 0.60f)
 
     fun setDotSpacing(context: Context, value: Float) {
         sp(context).edit().putFloat(KEY_DOT_SPACING, value).apply()
+    }
+
+    /** Screenshots are optional. Turn off to disable capture entirely. */
+    fun isCaptureEnabled(context: Context): Boolean =
+        sp(context).getBoolean(KEY_CAPTURE_ENABLED, true)
+
+    fun setCaptureEnabled(context: Context, enabled: Boolean) {
+        sp(context).edit().putBoolean(KEY_CAPTURE_ENABLED, enabled).apply()
+    }
+
+    /**
+     * Once-only smaller, tighter three-dot default for upgraded users.
+     * Respect any dot size/spacing they have manually changed.
+     */
+    fun applyNovaDotDefaultsAfterUpdate(context: Context) {
+        val prefs = sp(context)
+        if (prefs.getBoolean(KEY_NOVA_DOT_MIGRATION, false)) return
+        val scale = prefs.getFloat(KEY_DOT_SCALE, 1.2f)
+        val spacing = prefs.getFloat(KEY_DOT_SPACING, 1f)
+        val edit = prefs.edit()
+        if (kotlin.math.abs(scale - 1.2f) < .001f) {
+            edit.putFloat(KEY_DOT_SCALE, .90f)
+        }
+        if (kotlin.math.abs(spacing - 1f) < .001f) {
+            edit.putFloat(KEY_DOT_SPACING, .60f)
+        }
+        edit.putBoolean(KEY_NOVA_DOT_MIGRATION, true).apply()
     }
 
     fun dotCenterX(context: Context): Float = sp(context).getFloat(KEY_DOT_CENTER_X, 0.5f)
