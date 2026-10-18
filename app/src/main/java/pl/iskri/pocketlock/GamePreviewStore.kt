@@ -79,7 +79,9 @@ object GamePreviewStore {
     @Synchronized fun preview(): Preview = frozen
 
     @Synchronized fun unfreeze() {
+        if (!isLocked) return
         isLocked = false
         frozen = Preview(null, null)
+        NovaCaptureService.resumeAfterUnlock()
     }
 }
