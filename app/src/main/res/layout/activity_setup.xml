@@ -91,6 +91,13 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="Enable game preview (Accessibility)" />
+                <TextView android:id="@+id/tvNovaStatus"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:paddingBottom="8dp"
+                    android:textColor="#FFAAC2C6"
+                    android:textSize="13sp" />
 
                 <pl.iskri.pocketlock.WrappingRowLayout
                     android:layout_width="match_parent"
