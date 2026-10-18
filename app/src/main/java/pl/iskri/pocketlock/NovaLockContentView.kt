@@ -1,5 +1,6 @@
 package pl.iskri.pocketlock
 
+import android.animation.ValueAnimator
 import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Color
@@ -10,6 +11,7 @@ import android.graphics.Typeface
 import android.graphics.drawable.Drawable
 import android.util.AttributeSet
 import android.view.View
+import android.view.animation.AccelerateDecelerateInterpolator
 import kotlin.math.min
 
 /** Compact, sharp 4:3 lock screen UI independent of Cocoon or game resolution. */
@@ -20,6 +22,49 @@ class NovaLockContentView @JvmOverloads constructor(
     private val clippingPath = Path()
     private var iconFor: String? = null
     private var cachedIcon: Drawable? = null
+    private var floating: ValueAnimator? = null
+    private var floatFraction = 0f
+
+    /**
+     * Runs only while the actual lock screen is awake. Never starts on attach,
+     * because the full-screen overlay is deliberately created while sleeping.
+     */
+    fun setDisplayAwake(awake: Boolean) {
+        val preview = GamePreviewStore.preview()
+        if (!awake || !isAttachedToWindow || !Prefs.isFloatEnabled(context) ||
+            preview.isHome || preview.bitmap == null) {
+            stopFloating()
+            return
+        }
+        if (floating?.isRunning == true) return
+        floating = ValueAnimator.ofFloat(-1f, 1f).apply {
+            duration = 3000L
+            repeatCount = ValueAnimator.INFINITE
+            repeatMode = ValueAnimator.REVERSE
+            interpolator = AccelerateDecelerateInterpolator()
+            addUpdateListener {
+                floatFraction = (it.animatedValue as Float)
+                invalidate()
+            }
+            start()
+        }
+    }
+
+    private fun stopFloating() {
+        floating?.removeAllUpdateListeners()
+        floating?.cancel()
+        floating = null
+        if (floatFraction != 0f) {
+            floatFraction = 0f
+            invalidate()
+        }
+    }
+
+    override fun onDetachedFromWindow() {
+        stopFloating()
+        super.onDetachedFromWindow()
+    }
+
 
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
@@ -31,7 +76,11 @@ class NovaLockContentView @JvmOverloads constructor(
         if (snapshot.isHome) {
             drawHomeMenu(canvas, w, h)
         } else {
+            canvas.save()
+            // Apply motion to the preview card only, not unlock text or dots.
+            canvas.translate(0f, floatFraction * resources.displayMetrics.density * 7f)
             drawGamePreview(canvas, w, h, snapshot)
+            canvas.restore()
         }
 
         p.style = Paint.Style.FILL
