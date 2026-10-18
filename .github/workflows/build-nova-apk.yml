@@ -1,6 +1,8 @@
 name: Build NovaLock APK
 on:
   workflow_dispatch:
+  push:
+    branches: [nova-preview]
 jobs:
   build:
     runs-on: ubuntu-latest
