@@ -36,6 +36,11 @@ android {
     }
 
     buildTypes {
+        debug {
+            // Allow installing beside the original Pocket Lock.
+            applicationIdSuffix = ".nova"
+            versionNameSuffix = "-nova-preview"
+        }
         release {
             isMinifyEnabled = false
             if (keystorePropsFile.exists()) {
