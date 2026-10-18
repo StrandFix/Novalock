@@ -500,7 +500,6 @@ class LockService : Service() {
             .setContentText(getString(R.string.notification_text))
             .setContentIntent(pi)
             .setOngoing(true)
-            .setSilent(true)
             .setOnlyAlertOnce(true)
             .setVisibility(Notification.VISIBILITY_SECRET)
             .setPriority(Notification.PRIORITY_MIN)
