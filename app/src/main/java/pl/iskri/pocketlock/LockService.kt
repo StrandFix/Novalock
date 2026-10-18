@@ -103,7 +103,13 @@ class LockService : Service() {
                     return
                 }
                 when (intent.action) {
-                    Intent.ACTION_SCREEN_OFF -> armLock()
+                    Intent.ACTION_SCREEN_OFF -> {
+                        // The screen is dark: no preview animation or audio polling.
+                        overlayView?.setDisplayAwake(false)
+                        LockActivity.setPreviewAwake(false)
+                        handler.removeCallbacks(audioCheckRunnable)
+                        armLock()
+                    }
                     Intent.ACTION_SCREEN_ON -> onScreenOn()
                 }
             }
@@ -311,6 +317,9 @@ class LockService : Service() {
             handler.postDelayed(audioCheckRunnable, AUDIO_CHECK_START_DELAY_MS)
         }
         muteMedia()
+        // Start gentle motion only after wake, never during suspend.
+        overlayView?.setDisplayAwake(true)
+        if (!isOverlayAttached) LockActivity.setPreviewAwake(true)
         // No system keyguard: the overlay has been attached since SCREEN_OFF, so there is
         // nothing to do here. Attaching again would flash the lock screen if this broadcast
         // arrives late (e.g. right after the user already unlocked).
@@ -336,7 +345,7 @@ class LockService : Service() {
             PixelFormat.TRANSLUCENT
         )
         params.gravity = Gravity.TOP or Gravity.START
-        params.setTitle("PocketLock")
+        params.setTitle("Novalock")
         try {
             (getSystemService(Context.WINDOW_SERVICE) as WindowManager).addView(view, params)
             overlayView = view
@@ -354,6 +363,7 @@ class LockService : Service() {
 
     private fun performUnlock(view: LockOverlayView) {
         Log.i(TAG, "overlay unlocked")
+        view.setDisplayAwake(false)
         lockArmed = false
         Prefs.setPressCount(this, 0)
         handler.removeCallbacks(audioCheckRunnable)
@@ -411,6 +421,7 @@ class LockService : Service() {
         PauseActivity.finishIfRunning()
         if (unmuteMedia) GamePreviewStore.unfreeze()
         val view = overlayView ?: return
+        view.setDisplayAwake(false)
         overlayView = null
         lockArmed = false
         isOverlayAttached = false
@@ -469,6 +480,10 @@ class LockService : Service() {
             NotificationManager.IMPORTANCE_MIN
         )
         channel.setShowBadge(false)
+        channel.enableVibration(false)
+        channel.enableLights(false)
+        channel.setSound(null, null)
+        channel.lockscreenVisibility = Notification.VISIBILITY_SECRET
         nm.createNotificationChannel(channel)
     }
 
@@ -485,12 +500,18 @@ class LockService : Service() {
             .setContentText(getString(R.string.notification_text))
             .setContentIntent(pi)
             .setOngoing(true)
+            .setSilent(true)
+            .setOnlyAlertOnce(true)
+            .setVisibility(Notification.VISIBILITY_SECRET)
+            .setPriority(Notification.PRIORITY_MIN)
+            .setCategory(Notification.CATEGORY_SERVICE)
             .build()
     }
 
     companion object {
         private const val TAG = "PocketLock"
-        private const val CHANNEL_ID = "pocketlock"
+        // New channel so legacy user-configured importance cannot trigger heads-up.
+        private const val CHANNEL_ID = "novalock_quiet_service_v4"
         private const val NOTIFICATION_ID = 1
         // Audio polling while locked: how long after screen-on to start, how often to check,
         // and how many consecutive "still playing" results trigger the opaque PauseActivity.
