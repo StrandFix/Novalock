@@ -198,6 +198,7 @@ class LockService : Service() {
             Log.i(TAG, "system bars visible before lock: $barsVisible")
             Prefs.setBarsVisible(this, barsVisible)
             lockedPackage = packageBeforeLock
+            GamePreviewStore.freeze(packageBeforeLock)
             Log.i(TAG, "app before lock: ${lockedPackage ?: "unknown"}")
         }
         if (!Prefs.rememberPresses(this)) {
@@ -411,6 +412,7 @@ class LockService : Service() {
         overlayView = null
         lockArmed = false
         isOverlayAttached = false
+        GamePreviewStore.unfreeze()
         if (unmuteMedia) {
             lockedPackage = null
         }
