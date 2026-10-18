@@ -12,7 +12,8 @@ object GamePreviewStore {
     data class Preview(
         val packageName: String?,
         val bitmap: Bitmap?,
-        val isHome: Boolean = false
+        val isHome: Boolean = false,
+        val isSettings: Boolean = false
     )
 
     @Volatile var isLocked: Boolean = false
@@ -31,10 +32,13 @@ object GamePreviewStore {
         if (isLocked || !NovaAppKinds.isSafeApp(name)) return
         if (currentPackage != name) {
             currentPackage = name
-            if (NovaAppKinds.isCocoon(context, name)) {
+            if (NovaAppKinds.isCocoon(context, name) ||
+                NovaAppKinds.isSettings(context, name)) {
                 lastBitmap = null
                 capturedPackage = null
-                captureStatus = "Cocoon Home Menu - screenshots disabled"
+                captureStatus = if (NovaAppKinds.isSettings(context, name))
+                    "Settings - screenshots disabled"
+                else "Cocoon Home Menu - screenshots disabled"
             }
         }
     }
@@ -55,24 +59,31 @@ object GamePreviewStore {
         if (isLocked) return
         val observed = currentPackage
         val reported = reportedPackage?.takeIf(NovaAppKinds::isSafeApp)
+        val settings = NovaAppKinds.isSettings(context, reported) ||
+            (reported == null && NovaAppKinds.isSettings(context, observed))
         val isHomeReported = NovaAppKinds.isCocoon(context, reported)
         val isHomeObserved = NovaAppKinds.isCocoon(context, observed)
-        val home = isHomeReported || (reported == null && isHomeObserved)
+        val home = !settings && (isHomeReported || (reported == null && isHomeObserved))
         val currentFrameFresh = SystemClock.elapsedRealtime() - frameTakenAt < 90000L
         val picturePackage = capturedPackage
 
         // UsageStats can lag for full-screen emulators. Prefer the latest actual
         // screenshot when Accessibility still identifies that emulator as current.
         val selected = when {
+            settings -> reported ?: observed
             home -> reported ?: observed
             currentFrameFresh && picturePackage != null &&
                 observed == picturePackage -> picturePackage
             reported != null -> reported
             else -> observed ?: picturePackage
         }
-        val frame = if (!home && currentFrameFresh &&
+        val frame = if (!home && !settings && currentFrameFresh &&
             selected == picturePackage) lastBitmap else null
-        frozen = Preview(selected, frame, home || NovaAppKinds.isCocoon(context, selected))
+        frozen = Preview(
+            selected, frame,
+            home || NovaAppKinds.isCocoon(context, selected),
+            settings || NovaAppKinds.isSettings(context, selected)
+        )
         isLocked = true
     }
 
