@@ -84,6 +84,7 @@ class LockService : Service() {
 
     override fun onCreate() {
         super.onCreate()
+        Prefs.applyNovaDotDefaultsAfterUpdate(this)
         isRunning = true
         createChannel()
         goForeground()
@@ -198,7 +199,7 @@ class LockService : Service() {
             Log.i(TAG, "system bars visible before lock: $barsVisible")
             Prefs.setBarsVisible(this, barsVisible)
             lockedPackage = packageBeforeLock
-            GamePreviewStore.freeze(packageBeforeLock)
+            GamePreviewStore.freeze(this, packageBeforeLock)
             Log.i(TAG, "app before lock: ${lockedPackage ?: "unknown"}")
         }
         if (!Prefs.rememberPresses(this)) {
