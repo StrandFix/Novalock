@@ -319,6 +319,9 @@ class SetupActivity : Activity() {
     }
 
     private fun updateStatus() {
+        findViewById<TextView>(R.id.tvNovaStatus).text =
+            "Game preview: " + (if (NovaCaptureService.isConnected) "Service active. " else
+                "Accessibility service is not running. ") + GamePreviewStore.captureStatus
         val overlay = Settings.canDrawOverlays(this)
         val notifications = Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
             checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
