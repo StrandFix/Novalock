@@ -18,13 +18,12 @@ import java.lang.ref.WeakReference
 
 /**
  * Battery-conscious, optional game screenshot capture.
- * While a game is foregrounded: one small still frame ~every 25 seconds.
+ * While a game is foregrounded: one still frame every 25/11/6 seconds as configured.
  * Screen off / locked / Cocoon / disabled: no screenshot polling.
  * All images remain in RAM; none are written to disk.
  */
 class NovaCaptureService : AccessibilityService() {
     companion object {
-        private const val CAPTURE_INTERVAL_MS = 25_000L
         private const val APP_SWITCH_DELAY_MS = 1_600L
         private const val MAX_PREVIEW_EDGE_PX = 760f
 
@@ -140,8 +139,8 @@ class NovaCaptureService : AccessibilityService() {
                 Log.w("NovaCapture", "Capture request failed", e)
             }
         }
-        // A 25-second timer exists only while the screen is on and unlocked.
-        if (awakeAndPlaying()) scheduleCapture(CAPTURE_INTERVAL_MS)
+        // No recurring work is scheduled when the display is off or locked.
+        if (awakeAndPlaying()) scheduleCapture(Prefs.captureIntervalMs(this))
     }
 
     override fun onServiceConnected() {
