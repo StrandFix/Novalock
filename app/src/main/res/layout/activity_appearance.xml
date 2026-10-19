@@ -74,6 +74,28 @@
                 android:layout_height="wrap_content"
                 android:orientation="vertical">
 
+                <TextView android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="BACKGROUND THEME"
+                    android:layout_marginTop="8dp"
+                    android:textColor="#FF78D4CE"
+                    android:textStyle="bold"
+                    android:textSize="12sp" />
+                <Spinner android:id="@+id/spNovaBackgroundTheme"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:background="@drawable/bg_spinner"
+                    android:popupBackground="@drawable/bg_spinner_popup"
+                    android:spinnerMode="dropdown" />
+                <TextView android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:layout_marginBottom="18dp"
+                    android:text="Choose the default look. A custom photo still takes precedence when enabled."
+                    android:textColor="#FFA6ADB5"
+                    android:textSize="12sp" />
+
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -91,7 +113,7 @@
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:text="@string/appearance_black_background" />
+                        android:text="Remove custom photo" />
                 </LinearLayout>
 
                 <LinearLayout
