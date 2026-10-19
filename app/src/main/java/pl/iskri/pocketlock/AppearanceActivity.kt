@@ -119,6 +119,7 @@ class AppearanceActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         Prefs.applyTopBarDefaultsAfterUpdate(this)
+        Prefs.applyV6StatusDefaults(this)
         setContentView(R.layout.activity_appearance)
 
         screenW = resources.displayMetrics.widthPixels
@@ -160,6 +161,25 @@ class AppearanceActivity : Activity() {
         findViewById<Button>(R.id.btnTabColors).setOnClickListener { setTab(TAB_COLORS) }
         findViewById<Button>(R.id.btnTabTopBar).setOnClickListener { setTab(TAB_TOPBAR) }
         setTab(TAB_BACKGROUND)
+
+        val themes = arrayOf(Prefs.BG_MINIMAL, Prefs.BG_COCOON)
+        val themeSpinner = findViewById<Spinner>(R.id.spNovaBackgroundTheme)
+        themeSpinner.adapter = ArrayAdapter(
+            this, R.layout.spinner_item,
+            arrayOf("Minimal Dark · smooth graphite", "Cocoon Grid · classic")
+        ).apply { setDropDownViewResource(R.layout.spinner_dropdown_item) }
+        themeSpinner.setSelection(themes.indexOf(Prefs.backgroundTheme(this)).coerceAtLeast(0))
+        themeSpinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(
+                parent: AdapterView<*>?, view: View?, position: Int, id: Long
+            ) {
+                val theme = themes[position]
+                if (Prefs.backgroundTheme(this@AppearanceActivity) == theme) return
+                Prefs.setBackgroundTheme(this@AppearanceActivity, theme)
+                refreshPreview()
+            }
+            override fun onNothingSelected(parent: AdapterView<*>?) = Unit
+        }
 
         val cbTopBar = findViewById<CheckBox>(R.id.cbTopBar)
         cbTopBar.isChecked = Prefs.isTopBarEnabled(this)
@@ -310,6 +330,7 @@ class AppearanceActivity : Activity() {
     }
 
     private fun refreshPreview() {
+        preview.findViewById<NovaLockBackground>(R.id.nova_background)?.refreshTheme()
         LockAppearance.apply(preview, this)
         preview.setPreviewState(1)
         val range = LockAppearance.backgroundPanRangePx(preview, this)
