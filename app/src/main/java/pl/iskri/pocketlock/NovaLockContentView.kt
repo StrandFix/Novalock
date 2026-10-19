@@ -255,6 +255,13 @@ class NovaLockContentView @JvmOverloads constructor(
         canvas.drawRoundRect(box, corner, corner, p)
         p.style = Paint.Style.FILL
 
+        // Draw AFTER restoring the image's clipping region and outline.
+        // The badge therefore hangs slightly beyond the bottom-left edge,
+        // instead of being cropped by the screenshot's rounded corners.
+        if (picture != null && Prefs.isPreviewBadgeEnabled(context)) {
+            drawEmulatorBadge(canvas, box, preview.packageName, w, h)
+        }
+
         // A tiny, static context label makes the game preview feel like a
         // deliberate system UI card. It adds no work while the device sleeps.
         p.textAlign = Paint.Align.CENTER
@@ -262,5 +269,50 @@ class NovaLockContentView @JvmOverloads constructor(
         p.textSize = h * .021f
         p.color = Color.rgb(133, 176, 180)
         canvas.drawText("READY TO RESUME", w / 2f, h * .649f, p)
+
+    private fun drawEmulatorBadge(
+        canvas: Canvas, card: RectF, packageName: String?, w: Float, h: Float
+    ) {
+        if (packageName.isNullOrBlank()) return
+        if (packageName != iconFor || cachedIcon == null) {
+            iconFor = packageName
+            cachedIcon = try {
+                context.packageManager.getApplicationIcon(packageName)
+            } catch (_: Exception) { null }
+        }
+        val drawable = cachedIcon ?: return
+        val side = min(min(w, h) * .109f, card.height() * .31f)
+        // About a quarter of the badge sits outside the image on both axes.
+        val centerX = card.left + side * .28f
+        val centerY = card.bottom - side * .24f
+        val badge = RectF(centerX - side / 2f, centerY - side / 2f,
+            centerX + side / 2f, centerY + side / 2f)
+        val radius = side * .28f
+
+        // Shadow, graphite backing and the same subdued teal rim as the
+        // screenshot. Android's own app icon keeps its transparent pixels.
+        p.style = Paint.Style.FILL
+        p.color = Color.argb(95, 0, 0, 0)
+        canvas.drawRoundRect(RectF(badge.left - 2f, badge.top + 4f,
+            badge.right + 2f, badge.bottom + 7f), radius, radius, p)
+        p.color = Color.rgb(32, 38, 44)
+        canvas.drawRoundRect(badge, radius, radius, p)
+        p.color = Color.rgb(117, 187, 184)
+        p.strokeWidth = (min(w, h) * .0025f).coerceAtLeast(1.5f)
+        p.style = Paint.Style.STROKE
+        canvas.drawRoundRect(badge, radius, radius, p)
+        p.style = Paint.Style.FILL
+
+        val inset = (side * .095f).toInt().coerceAtLeast(1)
+        val imageSize = side.toInt().coerceAtLeast(1)
+        // No rectangular mask: icons with true alpha remain transparent.
+        drawable.setBounds(
+            badge.left.toInt() + inset,
+            badge.top.toInt() + inset,
+            badge.left.toInt() + imageSize - inset,
+            badge.top.toInt() + imageSize - inset
+        )
+        drawable.draw(canvas)
+    }
     }
 }
