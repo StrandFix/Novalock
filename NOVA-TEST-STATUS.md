@@ -39,3 +39,9 @@ This APK is a test build; battery usage and emulator behavior require validation
 - Screenshots and screenshot sampling are disabled in Settings, avoiding sensitive device information on the lock screen and reducing work.
 - Game preview includes a small, still **READY TO RESUME** label under the card; the game preview, optional float animation, Cocoon HOME layout, buttons and dots otherwise remain the same.
 - Existing foreground service remains for reliable locking. Battery impact is not claimed to be literally zero; Android device testing is required.
+
+## V6.1 — Fix Android Settings wake-lock visibility
+- Android Settings may hide non-system overlays for security; Settings now deliberately skips the third-party overlay and uses the visible LockActivity window instead.
+- On activity-only unlock, the service clears the armed-lock flag, frozen preview, timeout, muted media, and audio focus. Otherwise the subsequent sleep can inherit the previous Settings lock.
+- Cocoon, all emulators and game previews still use the original overlay-based path. Existing 3-button behavior, animations, low-power screen-off handling and custom appearance settings remain unchanged.
+- Validate on real Retroid Pocket Nova: Settings → sleep/wake shows Settings lock immediately; three presses unlock; a second Settings sleep/wake also works; Cocoon and games still show previews; no regressions in screen-off power use.
