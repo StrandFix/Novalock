@@ -3,7 +3,8 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:padding="20dp">
+    android:padding="16dp"
+    android:background="#FF27282A">
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -22,14 +23,15 @@
                 android:layout_height="wrap_content"
                 android:text="@string/setup_title"
                 android:textColor="@android:color/white"
-                android:textSize="24sp"
+                android:textSize="28sp"
+                android:fontFamily="sans-serif-medium"
                 android:textStyle="bold" />
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@string/setup_subtitle"
-                android:textColor="#AAAAAA"
+                android:textColor="#FFB5B8BC"
                 android:textSize="13sp" />
         </LinearLayout>
 
@@ -45,11 +47,12 @@
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="12dp"
+        android:layout_marginTop="18dp"
         android:orientation="horizontal">
 
         <Button
             android:id="@+id/btnTabPermissions"
+            android:background="@drawable/nova_tab_inactive"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
@@ -57,6 +60,7 @@
 
         <Button
             android:id="@+id/btnTabOptions"
+            android:background="@drawable/nova_tab_active"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
@@ -85,6 +89,28 @@
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
+                    android:layout_marginTop="18dp"
+                    android:layout_marginBottom="8dp"
+                    android:text="GAME PREVIEW PERMISSION"
+                    android:textColor="#FF82D3CA"
+                    android:textSize="12sp"
+                    android:textStyle="bold" />
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp"
+                    android:background="@drawable/nova_panel">
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="10dp"
+                        android:text="Used only to capture your paused game. Screenshots stay in RAM."
+                        android:textColor="#FFB8C1C3"
+                        android:textSize="13sp" />
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
                     android:text="Optional: enable game-preview service (Accessibility) to show a still screenshot. Otherwise the last app's icon appears."
                     android:textColor="#FFAABBCC" android:paddingBottom="8dp" />
                 <Button android:id="@+id/btnNovaAccessibility"
@@ -99,6 +125,29 @@
                     android:textColor="#FFAAC2C6"
                     android:textSize="13sp" />
 
+                </LinearLayout>
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="18dp"
+                    android:layout_marginBottom="8dp"
+                    android:text="SYSTEM PERMISSIONS"
+                    android:textColor="#FF82D3CA"
+                    android:textSize="12sp"
+                    android:textStyle="bold" />
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp"
+                    android:background="@drawable/nova_panel">
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="10dp"
+                        android:text="Grant the permissions required for reliable lock and wake behavior."
+                        android:textColor="#FFB8C1C3"
+                        android:textSize="13sp" />
                 <pl.iskri.pocketlock.WrappingRowLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content">
@@ -262,6 +311,7 @@
                         android:layout_height="wrap_content"
                         android:text="@string/btn_grant" />
                 </pl.iskri.pocketlock.WrappingRowLayout>
+                </LinearLayout>
             </LinearLayout>
 
             <LinearLayout
@@ -271,6 +321,28 @@
                 android:orientation="vertical"
                 android:visibility="gone">
 
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="18dp"
+                    android:layout_marginBottom="8dp"
+                    android:text="LOCK SERVICE"
+                    android:textColor="#FF82D3CA"
+                    android:textSize="12sp"
+                    android:textStyle="bold" />
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp"
+                    android:background="@drawable/nova_panel">
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="10dp"
+                        android:text="Enable the lock screen when you put your Nova to sleep."
+                        android:textColor="#FFB8C1C3"
+                        android:textSize="13sp" />
                 <Switch
                     android:id="@+id/swEnabled"
                     android:layout_width="match_parent"
@@ -287,12 +359,35 @@
                     android:textColor="#AAAAAA"
                     android:textSize="14sp" />
 
+                </LinearLayout>
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="18dp"
+                    android:layout_marginBottom="8dp"
+                    android:text="GAME PREVIEW"
+                    android:textColor="#FF82D3CA"
+                    android:textSize="12sp"
+                    android:textStyle="bold" />
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp"
+                    android:background="@drawable/nova_panel">
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="10dp"
+                        android:text="Choose how Novalock shows the paused game or HOME screen."
+                        android:textColor="#FFB8C1C3"
+                        android:textSize="13sp" />
                 <CheckBox
                     android:id="@+id/cbNovaCapture"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="12dp"
-                    android:text="Capture game preview (battery-saving: roughly every 25 seconds)"
+                    android:text="Capture still image of running game"
                     android:textColor="@android:color/white"
                     android:textSize="15sp" />
 
@@ -301,10 +396,33 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="4dp"
-                    android:text="Floating game preview (only while lock screen is awake)"
+                    android:text="Gentle floating animation"
                     android:textColor="@android:color/white"
                     android:textSize="16sp" />
 
+                </LinearLayout>
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="18dp"
+                    android:layout_marginBottom="8dp"
+                    android:text="BUTTONS & FEEDBACK"
+                    android:textColor="#FF82D3CA"
+                    android:textSize="12sp"
+                    android:textStyle="bold" />
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp"
+                    android:background="@drawable/nova_panel">
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="10dp"
+                        android:text="Keep control of all unlock methods, feedback and three presses."
+                        android:textColor="#FFB8C1C3"
+                        android:textSize="13sp" />
                 <CheckBox
                     android:id="@+id/cbSound"
                     android:layout_width="match_parent"
@@ -372,6 +490,29 @@
                     android:textColor="#AAAAAA"
                     android:textSize="13sp" />
 
+                </LinearLayout>
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="18dp"
+                    android:layout_marginBottom="8dp"
+                    android:text="SLEEP & ANIMATIONS"
+                    android:textColor="#FF82D3CA"
+                    android:textSize="12sp"
+                    android:textStyle="bold" />
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp"
+                    android:background="@drawable/nova_panel">
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="10dp"
+                        android:text="Adjust the timeout and the animation when you unlock."
+                        android:textColor="#FFB8C1C3"
+                        android:textSize="13sp" />
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
@@ -434,6 +575,29 @@
                     android:popupBackground="@drawable/bg_spinner_popup"
                     android:spinnerMode="dropdown" />
 
+                </LinearLayout>
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="18dp"
+                    android:layout_marginBottom="8dp"
+                    android:text="APPEARANCE & SYSTEM"
+                    android:textColor="#FF82D3CA"
+                    android:textSize="12sp"
+                    android:textStyle="bold" />
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp"
+                    android:background="@drawable/nova_panel">
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="10dp"
+                        android:text="Customize colors, dots, time, battery and notification visibility."
+                        android:textColor="#FFB8C1C3"
+                        android:textSize="13sp" />
                 <CheckBox
                     android:id="@+id/cbNotification"
                     android:layout_width="match_parent"
@@ -456,21 +620,22 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="4dp"
-                    android:text="Hide system notification" />
+                    android:text="Notification settings" />
 
                 <Button
                     android:id="@+id/btnAppearance"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="16dp"
-                    android:text="@string/btn_appearance" />
+                    android:text="Personalize lock screen" />
 
                 <Button
                     android:id="@+id/btnButtons"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="8dp"
-                    android:text="@string/btn_buttons" />
+                    android:text="Configure unlock buttons" />
+                </LinearLayout>
             </LinearLayout>
         </FrameLayout>
     </ScrollView>
