@@ -6,7 +6,7 @@
     <string name="notification_text">The lock screen appears when the display wakes up.</string>
 
     <string name="setup_title">Novalock</string>
-    <string name="setup_subtitle">Lock screen: 3 presses, just like on the Switch</string>
+    <string name="setup_subtitle">A calmer, smarter lock screen for your Nova</string>
 
     <string name="tab_permissions">Permissions</string>
     <string name="tab_options">Options</string>
@@ -71,11 +71,11 @@
     <string name="appearance_tab_dots">Dots</string>
     <string name="appearance_tab_colors">Colors</string>
     <string name="appearance_tab_topbar">Top bar</string>
-    <string name="appearance_hint_background">Drag to move, pinch to zoom the background.</string>
+    <string name="appearance_hint_background">Choose Minimal Dark or Cocoon Grid. You can also import a photo and adjust its position.</string>
     <string name="appearance_hint_dots">Drag to move, pinch to resize the dots.</string>
     <string name="appearance_hint_colors">Pick colors below — drag/pinch on the preview adjusts the dots.</string>
-    <string name="appearance_hint_topbar">Shows the time and battery level at the top. Set the bar opacity to 0% to make it transparent.</string>
-    <string name="appearance_topbar_enable">Show top bar</string>
+    <string name="appearance_hint_topbar">Centered clock and right-aligned battery. Charging lights up green. Adjust clock format, colors and placement below.</string>
+    <string name="appearance_topbar_enable">Show clock and battery</string>
     <string name="appearance_topbar_clock_enable">Show clock</string>
     <string name="appearance_topbar_clock_format">Clock format</string>
     <string name="appearance_topbar_clock_system">System setting</string>
