@@ -392,6 +392,39 @@
                     android:textSize="15sp" />
 
                 <CheckBox
+                    android:id="@+id/cbNovaBadge"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:text="Show emulator icon on game preview"
+                    android:textColor="@android:color/white"
+                    android:textSize="15sp" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:text="Screenshot refresh rate"
+                    android:textColor="#FFF0F5F5"
+                    android:textSize="15sp" />
+                <Spinner
+                    android:id="@+id/spNovaCaptureSpeed"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="5dp"
+                    android:background="@drawable/bg_spinner"
+                    android:popupBackground="@drawable/bg_spinner_popup"
+                    android:spinnerMode="dropdown" />
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="5dp"
+                    android:layout_marginBottom="8dp"
+                    android:text="Only while a game is active and the screen is awake. Never during sleep, locking, HOME or Settings."
+                    android:textColor="#FFAFBCC0"
+                    android:textSize="12sp" />
+
+                <CheckBox
                     android:id="@+id/cbNovaFloat"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
