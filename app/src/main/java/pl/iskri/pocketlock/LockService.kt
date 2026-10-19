@@ -38,6 +38,9 @@ class LockService : Service() {
     private var mediaMuted = false
     private var audioActiveCount = 0
     private var lockedPackage: String? = null
+    // Settings may suppress TYPE_APPLICATION_OVERLAY for anti-tapjacking.
+    // The activity must be the visible lock screen for those system panels.
+    private var activityOnlyLock = false
     private val handler = Handler(Looper.getMainLooper())
 
     /**
@@ -87,6 +90,7 @@ class LockService : Service() {
         Prefs.applyNovaDotDefaultsAfterUpdate(this)
         Prefs.applyV6StatusDefaults(this)
         isRunning = true
+        currentInstance = java.lang.ref.WeakReference(this)
         createChannel()
         goForeground()
         // Safety net: if a previous instance was killed while the media stream was muted, restore
@@ -136,6 +140,7 @@ class LockService : Service() {
 
     override fun onDestroy() {
         isRunning = false
+        if (currentInstance?.get() === this) currentInstance = null
         detachOverlay(unmuteMedia = true)
         PauseActivity.finishIfRunning()
         ScreenTimeout.cancel()
@@ -207,7 +212,8 @@ class LockService : Service() {
             Prefs.setBarsVisible(this, barsVisible)
             lockedPackage = packageBeforeLock
             GamePreviewStore.freeze(this, packageBeforeLock)
-            Log.i(TAG, "app before lock: ${lockedPackage ?: "unknown"}")
+            activityOnlyLock = GamePreviewStore.preview().isSettings
+            Log.i(TAG, "app before lock: ${lockedPackage ?: "unknown"}; activity-only=$activityOnlyLock")
         }
         if (!Prefs.rememberPresses(this)) {
             Prefs.setPressCount(this, 0)
@@ -218,7 +224,9 @@ class LockService : Service() {
         handler.removeCallbacks(audioCheckRunnable)
         PauseActivity.finishIfRunning()
         ScreenTimeout.cancel()
-        attachOverlay()
+        // Settings deliberately hides untrusted overlays. Showing both windows
+        // makes LockActivity invisible while Settings remains on screen.
+        if (!activityOnlyLock) attachOverlay()
         requestAudioFocus(this)
         // Silence media for the whole locked period (the app behind the lock may ignore audio
         // focus, e.g. Dolphin) and restore it on unlock / screen-off cleanup.
@@ -318,6 +326,10 @@ class LockService : Service() {
             handler.postDelayed(audioCheckRunnable, AUDIO_CHECK_START_DELAY_MS)
         }
         muteMedia()
+        if (activityOnlyLock && lockArmed) {
+            // Recover Activity ordering if the ROM moved Settings to foreground.
+            LockActivity.launch(this)
+        }
         // Start gentle motion only after wake, never during suspend.
         overlayView?.setDisplayAwake(true)
         if (!isOverlayAttached) LockActivity.setPreviewAwake(true)
@@ -331,7 +343,7 @@ class LockService : Service() {
     }
 
     private fun attachOverlay() {
-        if (overlayView != null) return
+        if (activityOnlyLock || overlayView != null) return
         if (!Settings.canDrawOverlays(this)) return
         val view = LayoutInflater.from(this)
             .inflate(R.layout.activity_lock, null) as? LockOverlayView ?: return
@@ -355,6 +367,27 @@ class LockService : Service() {
         } catch (t: Throwable) {
             Prefs.setLastKey(this, "overlay error: ${t.javaClass.simpleName}")
         }
+    }
+
+    /**
+     * Activity-only lock is the supported route for system Settings, which can
+     * suppress third-party overlays. Restore all state on the third press.
+     * Never interfere with the normal game's overlay animation.
+     */
+    private fun completeActivityOnlyUnlock() {
+        if (!activityOnlyLock || !lockArmed || overlayView != null) return
+        lockArmed = false
+        activityOnlyLock = false
+        lockedPackage = null
+        Prefs.setPressCount(this, 0)
+        handler.removeCallbacks(audioCheckRunnable)
+        audioActiveCount = 0
+        ScreenTimeout.cancel()
+        PauseActivity.finishIfRunning()
+        unmuteMedia()
+        GamePreviewStore.unfreeze()
+        abandonAudioFocus(this)
+        Log.i(TAG, "Settings activity-only lock completed")
     }
 
     /** Resets the screen-off timeout without resuming the app behind the lock. */
@@ -430,6 +463,7 @@ class LockService : Service() {
         // Keep the frozen preview during that handoff; only clear it at unlock.
         if (unmuteMedia) {
             lockedPackage = null
+            activityOnlyLock = false
         }
         ScreenTimeout.cancel()
         abandonAudioFocus(this)
@@ -530,6 +564,12 @@ class LockService : Service() {
             private set
 
         private var focusRequest: AudioFocusRequest? = null
+        private var currentInstance: java.lang.ref.WeakReference<LockService>? = null
+
+        /** Invoked by LockActivity on the main thread after its third press. */
+        fun activityOnlyUnlocked() {
+            currentInstance?.get()?.completeActivityOnlyUnlock()
+        }
 
         fun requestAudioFocus(context: Context) {
             if (focusRequest != null) return
