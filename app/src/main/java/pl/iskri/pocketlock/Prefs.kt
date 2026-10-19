@@ -47,6 +47,12 @@ object Prefs {
     private const val KEY_DOT_SCALE = "dot_scale"
     private const val KEY_NOVA_DOT_MIGRATION = "nova_dot_defaults_v3"
     private const val KEY_CAPTURE_ENABLED = "nova_capture_enabled"
+    private const val KEY_CAPTURE_INTERVAL = "nova_capture_interval_ms"
+    private const val KEY_EMULATOR_BADGE = "nova_preview_icon_badge"
+
+    const val CAPTURE_SAVER_MS = 25_000L
+    const val CAPTURE_BALANCED_MS = 11_000L
+    const val CAPTURE_RESPONSIVE_MS = 6_000L
     private const val KEY_DOT_SPACING = "dot_spacing"
     private const val KEY_DOT_CENTER_X = "dot_center_x"
     private const val KEY_DOT_CENTER_Y = "dot_center_y"
@@ -337,6 +343,31 @@ object Prefs {
             edit.putFloat(KEY_DOT_SPACING, .60f)
         }
         edit.putBoolean(KEY_NOVA_DOT_MIGRATION, true).apply()
+    }
+
+    /** Small app/emulator badge at the lower-left of a captured game screenshot. */
+    fun isPreviewBadgeEnabled(context: Context): Boolean =
+        sp(context).getBoolean(KEY_EMULATOR_BADGE, true)
+
+    fun setPreviewBadgeEnabled(context: Context, enabled: Boolean) {
+        sp(context).edit().putBoolean(KEY_EMULATOR_BADGE, enabled).apply()
+    }
+
+    /** No screenshot polling is performed when sleeping, locked or in system menus. */
+    fun captureIntervalMs(context: Context): Long {
+        val requested = sp(context).getLong(KEY_CAPTURE_INTERVAL, CAPTURE_BALANCED_MS)
+        return when (requested) {
+            CAPTURE_SAVER_MS, CAPTURE_BALANCED_MS, CAPTURE_RESPONSIVE_MS -> requested
+            else -> CAPTURE_BALANCED_MS
+        }
+    }
+
+    fun setCaptureIntervalMs(context: Context, interval: Long) {
+        val validated = when (interval) {
+            CAPTURE_SAVER_MS, CAPTURE_BALANCED_MS, CAPTURE_RESPONSIVE_MS -> interval
+            else -> CAPTURE_BALANCED_MS
+        }
+        sp(context).edit().putLong(KEY_CAPTURE_INTERVAL, validated).apply()
     }
 
     fun dotCenterX(context: Context): Float = sp(context).getFloat(KEY_DOT_CENTER_X, 0.5f)
