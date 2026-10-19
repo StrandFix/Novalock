@@ -3,8 +3,6 @@ on:
   workflow_dispatch:
   push:
     branches: [nova-preview]
-  push:
-    branches: [nova-preview]
 jobs:
   build:
     runs-on: ubuntu-latest
