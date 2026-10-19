@@ -74,6 +74,8 @@ class LockOverlayView @JvmOverloads constructor(
     fun setDisplayAwake(awake: Boolean) {
         findViewById<NovaLockContentView>(R.id.nova_content)
             ?.setDisplayAwake(awake && interactive)
+        findViewById<LockTopBar>(R.id.top_bar)
+            ?.setDisplayAwake(awake && interactive)
     }
 
     override fun onDetachedFromWindow() {
