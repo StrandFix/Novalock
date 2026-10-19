@@ -45,3 +45,11 @@ This APK is a test build; battery usage and emulator behavior require validation
 - On activity-only unlock, the service clears the armed-lock flag, frozen preview, timeout, muted media, and audio focus. Otherwise the subsequent sleep can inherit the previous Settings lock.
 - Cocoon, all emulators and game previews still use the original overlay-based path. Existing 3-button behavior, animations, low-power screen-off handling and custom appearance settings remain unchanged.
 - Validate on real Retroid Pocket Nova: Settings → sleep/wake shows Settings lock immediately; three presses unlock; a second Settings sleep/wake also works; Cocoon and games still show previews; no regressions in screen-off power use.
+
+## V6.2 — Game preview emulator icon + capture speed
+- Keep Settings activity-only lock fix from V6.1; do not alter Cocoon, HOME, Settings, device key logic, dot settings, preview animations or battery/clock.
+- Show active app/emulator's native transparent app icon as a subtly bordered graphite badge, overlapping screenshot's lower-left corner. The badge never appears on HOME or Settings, or when there's no screenshot.
+- New Preview option: **Show emulator icon on game preview**, enabled by default, configurable independently from image capture and float animation.
+- Screenshot refresh speed: **Battery saver 25 s**, **Balanced 11 s** (default), **Responsive 6 s**. A still image is also requested soon after switching apps. Never schedule screenshot capture while sleeping, locked, Cocoon HOME, Settings, or if disabled. A faster rate may increase energy use when actively gaming, but sleep mode polling remains off.
+- All bitmap captures remain ephemeral in memory; no persistent uploads or recordings.
+- Physical Retroid Pocket Nova testing required for the overlapping badge, Settings wake and sleep-mode power.
