@@ -270,6 +270,8 @@ class NovaLockContentView @JvmOverloads constructor(
         p.color = Color.rgb(133, 176, 180)
         canvas.drawText("READY TO RESUME", w / 2f, h * .649f, p)
 
+    }
+
     private fun drawEmulatorBadge(
         canvas: Canvas, card: RectF, packageName: String?, w: Float, h: Float
     ) {
@@ -313,6 +315,5 @@ class NovaLockContentView @JvmOverloads constructor(
             badge.top.toInt() + imageSize - inset
         )
         drawable.draw(canvas)
-    }
     }
 }
