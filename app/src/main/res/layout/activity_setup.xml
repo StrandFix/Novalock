@@ -406,7 +406,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="18dp"
                     android:layout_marginBottom="8dp"
-                    android:text="BUTTONS & FEEDBACK"
+                    android:text="BUTTONS &amp; FEEDBACK"
                     android:textColor="#FF82D3CA"
                     android:textSize="12sp"
                     android:textStyle="bold" />
@@ -496,7 +496,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="18dp"
                     android:layout_marginBottom="8dp"
-                    android:text="SLEEP & ANIMATIONS"
+                    android:text="SLEEP &amp; ANIMATIONS"
                     android:textColor="#FF82D3CA"
                     android:textSize="12sp"
                     android:textStyle="bold" />
@@ -581,7 +581,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="18dp"
                     android:layout_marginBottom="8dp"
-                    android:text="APPEARANCE & SYSTEM"
+                    android:text="APPEARANCE &amp; SYSTEM"
                     android:textColor="#FF82D3CA"
                     android:textSize="12sp"
                     android:textStyle="bold" />
