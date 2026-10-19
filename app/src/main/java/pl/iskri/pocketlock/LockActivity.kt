@@ -146,6 +146,9 @@ class LockActivity : Activity() {
         if (closing) return
         closing = true
         lockView.setDisplayAwake(false)
+        // Settings uses an Activity rather than an overlay. The service must
+        // clear its armed state, or the next sleep inherits the previous lock.
+        LockService.activityOnlyUnlocked()
         GamePreviewStore.unfreeze()
         LockService.abandonAudioFocus(this)
         if (!silentFinish) {
