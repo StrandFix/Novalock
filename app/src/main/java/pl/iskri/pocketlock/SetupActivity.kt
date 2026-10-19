@@ -132,9 +132,43 @@ class SetupActivity : Activity() {
             startActivity(Intent(this, ButtonsActivity::class.java))
         }
 
+        val cbBadge = findViewById<CheckBox>(R.id.cbNovaBadge)
+        cbBadge.isChecked = Prefs.isPreviewBadgeEnabled(this)
+        cbBadge.setOnCheckedChangeListener { _, checked ->
+            Prefs.setPreviewBadgeEnabled(this, checked)
+        }
+
+        val speedChoices = longArrayOf(
+            Prefs.CAPTURE_SAVER_MS,
+            Prefs.CAPTURE_BALANCED_MS,
+            Prefs.CAPTURE_RESPONSIVE_MS
+        )
+        val captureSpeed = findViewById<Spinner>(R.id.spNovaCaptureSpeed)
+        captureSpeed.adapter = ArrayAdapter(this, R.layout.spinner_item, arrayOf(
+            "Battery saver  ·  every 25 seconds",
+            "Balanced  ·  every 11 seconds",
+            "Responsive  ·  every 6 seconds"
+        )).apply { setDropDownViewResource(R.layout.spinner_dropdown_item) }
+        captureSpeed.setSelection(
+            speedChoices.indexOf(Prefs.captureIntervalMs(this)).coerceAtLeast(1)
+        )
+        captureSpeed.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(
+                parent: AdapterView<*>?, view: View?, position: Int, id: Long
+            ) {
+                val selected = speedChoices[position]
+                if (Prefs.captureIntervalMs(this@SetupActivity) == selected) return
+                Prefs.setCaptureIntervalMs(this@SetupActivity, selected)
+                NovaCaptureService.onCapturePreferenceChanged()
+            }
+            override fun onNothingSelected(parent: AdapterView<*>?) = Unit
+        }
+
         val cbCapture = findViewById<CheckBox>(R.id.cbNovaCapture)
         cbCapture.isChecked = Prefs.isCaptureEnabled(this)
+        captureSpeed.isEnabled = cbCapture.isChecked
         cbCapture.setOnCheckedChangeListener { _, checked ->
+            captureSpeed.isEnabled = checked
             Prefs.setCaptureEnabled(this, checked)
             NovaCaptureService.onCapturePreferenceChanged()
             updateStatus()
