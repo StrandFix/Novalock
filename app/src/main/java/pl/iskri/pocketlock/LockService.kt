@@ -85,6 +85,7 @@ class LockService : Service() {
     override fun onCreate() {
         super.onCreate()
         Prefs.applyNovaDotDefaultsAfterUpdate(this)
+        Prefs.applyV6StatusDefaults(this)
         isRunning = true
         createChannel()
         goForeground()
