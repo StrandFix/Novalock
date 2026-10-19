@@ -286,14 +286,18 @@ class AppearanceActivity : Activity() {
             if (newTab == TAB_COLORS) View.VISIBLE else View.GONE
         findViewById<View>(R.id.tab_topbar).visibility =
             if (newTab == TAB_TOPBAR) View.VISIBLE else View.GONE
-        findViewById<Button>(R.id.btnTabBackground).alpha =
-            if (newTab == TAB_BACKGROUND) 1f else 0.5f
-        findViewById<Button>(R.id.btnTabDots).alpha =
-            if (newTab == TAB_DOTS) 1f else 0.5f
-        findViewById<Button>(R.id.btnTabColors).alpha =
-            if (newTab == TAB_COLORS) 1f else 0.5f
-        findViewById<Button>(R.id.btnTabTopBar).alpha =
-            if (newTab == TAB_TOPBAR) 1f else 0.5f
+        arrayOf(
+            R.id.btnTabBackground to TAB_BACKGROUND,
+            R.id.btnTabDots to TAB_DOTS,
+            R.id.btnTabColors to TAB_COLORS,
+            R.id.btnTabTopBar to TAB_TOPBAR
+        ).forEach { (id, target) ->
+            findViewById<Button>(id).apply {
+                alpha = 1f
+                setBackgroundResource(if (newTab == target)
+                    R.drawable.nova_tab_active else R.drawable.nova_tab_inactive)
+            }
+        }
         findViewById<TextView>(R.id.tvHint).text = when (newTab) {
             TAB_BACKGROUND -> getString(R.string.appearance_hint_background)
             TAB_DOTS -> getString(R.string.appearance_hint_dots)
