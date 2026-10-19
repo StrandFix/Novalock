@@ -59,6 +59,7 @@ class SetupActivity : Activity() {
         super.onCreate(savedInstanceState)
         Prefs.applyTopBarDefaultsAfterUpdate(this)
         Prefs.applyNovaDotDefaultsAfterUpdate(this)
+        Prefs.applyV6StatusDefaults(this)
         setContentView(R.layout.activity_setup)
 
         findViewById<Button>(R.id.btnTabPermissions).setOnClickListener { setTab(TAB_PERMISSIONS) }
@@ -313,10 +314,16 @@ class SetupActivity : Activity() {
             if (newTab == TAB_PERMISSIONS) View.VISIBLE else View.GONE
         findViewById<View>(R.id.tab_options).visibility =
             if (newTab == TAB_OPTIONS) View.VISIBLE else View.GONE
-        findViewById<Button>(R.id.btnTabPermissions).alpha =
-            if (newTab == TAB_PERMISSIONS) 1f else 0.5f
-        findViewById<Button>(R.id.btnTabOptions).alpha =
-            if (newTab == TAB_OPTIONS) 1f else 0.5f
+        findViewById<Button>(R.id.btnTabPermissions).apply {
+            alpha = 1f
+            setBackgroundResource(if (newTab == TAB_PERMISSIONS)
+                R.drawable.nova_tab_active else R.drawable.nova_tab_inactive)
+        }
+        findViewById<Button>(R.id.btnTabOptions).apply {
+            alpha = 1f
+            setBackgroundResource(if (newTab == TAB_OPTIONS)
+                R.drawable.nova_tab_active else R.drawable.nova_tab_inactive)
+        }
     }
 
     private fun requestAdmin() {
