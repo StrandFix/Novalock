@@ -36,6 +36,10 @@ object Prefs {
     private const val KEY_BUTTONS_REMOVED = "buttons_removed"
     private const val KEY_PRESS_COUNT = "press_count"
 
+    const val BG_MINIMAL = "minimal"
+    const val BG_COCOON = "cocoon"
+    private const val KEY_BG_THEME = "nova_bg_theme"
+    private const val KEY_V6_STATUS_MIGRATION = "nova_status_defaults_v6"
     private const val KEY_BG_ENABLED = "bg_enabled"
     private const val KEY_BG_SCALE = "bg_scale"
     private const val KEY_BG_OFFSET_X = "bg_offset_x"
@@ -253,6 +257,28 @@ object Prefs {
         sp(context).edit().putBoolean(KEY_MEDIA_MUTED, muted).apply()
     }
 
+    fun backgroundTheme(context: Context): String =
+        sp(context).getString(KEY_BG_THEME, BG_MINIMAL) ?: BG_MINIMAL
+
+    fun setBackgroundTheme(context: Context, theme: String) {
+        sp(context).edit().putString(KEY_BG_THEME,
+            if (theme == BG_COCOON) BG_COCOON else BG_MINIMAL).apply()
+    }
+
+    /**
+     * Enable new centered clock and battery once at V6 migration.
+     * Preserve customized color, transparency, margins, and clock format.
+     */
+    fun applyV6StatusDefaults(context: Context) {
+        val prefs = sp(context)
+        if (prefs.getBoolean(KEY_V6_STATUS_MIGRATION, false)) return
+        prefs.edit()
+            .putBoolean(KEY_TOPBAR_ENABLED, true)
+            .putBoolean(KEY_TOPBAR_CLOCK_ENABLED, true)
+            .putBoolean(KEY_V6_STATUS_MIGRATION, true)
+            .apply()
+    }
+
     fun isBackgroundEnabled(context: Context): Boolean =
         sp(context).getBoolean(KEY_BG_ENABLED, false)
 
@@ -337,7 +363,7 @@ object Prefs {
 
     /** Whether the custom top bar (time + battery) is shown on the lock screen. */
     fun isTopBarEnabled(context: Context): Boolean =
-        sp(context).getBoolean(KEY_TOPBAR_ENABLED, false)
+        sp(context).getBoolean(KEY_TOPBAR_ENABLED, true)
 
     /** Apply the requested top-bar defaults once when upgrading an existing installation. */
     fun applyTopBarDefaultsAfterUpdate(context: Context) {
@@ -345,7 +371,7 @@ object Prefs {
         if (prefs.getInt(KEY_TOPBAR_DEFAULTS_VERSION, 0) >= 1) return
         prefs.edit()
             .putInt(KEY_TOPBAR_DEFAULTS_VERSION, 1)
-            .putBoolean(KEY_TOPBAR_ENABLED, false)
+            .putBoolean(KEY_TOPBAR_ENABLED, true)
             .putInt(KEY_TOPBAR_BG_COLOR, 0x00000000)
             .putInt(KEY_TOPBAR_TEXT_COLOR, 0xFFFFFFFF.toInt())
             .putFloat(KEY_TOPBAR_SCALE, 0.9f)
@@ -432,6 +458,7 @@ object Prefs {
 
     fun resetAppearance(context: Context) {
         sp(context).edit()
+            .remove(KEY_BG_THEME)
             .remove(KEY_BG_SCALE)
             .remove(KEY_BG_OFFSET_X)
             .remove(KEY_BG_OFFSET_Y)
