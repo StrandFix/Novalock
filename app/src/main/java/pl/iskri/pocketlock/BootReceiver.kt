@@ -8,6 +8,7 @@ class BootReceiver : BroadcastReceiver() {
 
     override fun onReceive(context: Context, intent: Intent) {
         Prefs.applyTopBarDefaultsAfterUpdate(context)
+        Prefs.applyV6StatusDefaults(context)
         if (Prefs.isEnabled(context)) {
             LockService.start(context)
         }
