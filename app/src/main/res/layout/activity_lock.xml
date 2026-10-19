@@ -5,6 +5,7 @@
     android:background="@android:color/black">
 
     <pl.iskri.pocketlock.NovaLockBackground
+        android:id="@+id/nova_background"
         android:layout_width="match_parent" android:layout_height="match_parent" />
 
     <ImageView android:id="@+id/bg_image" android:layout_width="match_parent"
