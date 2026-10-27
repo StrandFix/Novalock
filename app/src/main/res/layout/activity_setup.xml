@@ -459,6 +459,25 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="6dp"
                     android:text="Refresh artwork index" />
+                <Button
+                    android:id="@+id/btnCocoonManual"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="9dp"
+                    android:text="Choose artwork for next game" />
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:text="Manual fallback: pick one Cocoon image, then launch its game from Cocoon. This applies to that game session only; automatic artwork still needs game-title information."
+                    android:textColor="#FFAFBCC0"
+                    android:textSize="12sp" />
+                <Button
+                    android:id="@+id/btnCocoonDiagnostics"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="9dp"
+                    android:text="Copy artwork matching diagnostics" />
                 <TextView
                     android:id="@+id/tvCocoonArtStatus"
                     android:layout_width="match_parent"
