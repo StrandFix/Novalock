@@ -83,15 +83,11 @@ object CocoonArtworkStore {
                 clearCached()
             }
             return
-                clearCached()
-            }
-            return
         }
         if (NovaAppKinds.isSettings(context, packageName)) return
         var toLoad: Pair<String, String>? = null
         synchronized(lock) {
             lastForeground = packageName
-            if (assignedPackage == packageName)        synchronized(lock) {
             if (assignedPackage == packageName) return
             val title = selectedTitle
             val recent = SystemClock.elapsedRealtime() - selectedAt < SELECTION_LIFETIME_MS
