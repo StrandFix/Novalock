@@ -92,6 +92,32 @@ object CocoonArtworkStore {
         toLoad?.let { (title, pkg) -> loadFor(context.applicationContext, title, pkg) }
     }
 
+    /** Secondary evidence: an emulator's own window title may name the ROM. */
+    fun observeEmulatorWindowTitle(
+        context: Context, packageName: String, texts: List<String>
+    ) {
+        if (Prefs.cocoonImageMode(context) == Prefs.COCOON_MODE_LIVE ||
+            NovaAppKinds.isCocoon(context, packageName) ||
+            NovaAppKinds.isSettings(context, packageName)) return
+        val matched = synchronized(lock) {
+            texts.map(::normalizeTitle).firstOrNull {
+                it.length >= 3 && index.containsKey(it)
+            }
+        } ?: return
+        var shouldLoad = false
+        synchronized(lock) {
+            if (assignedPackage != packageName || assignedTitle != matched) {
+                assignedPackage = packageName
+                assignedTitle = matched
+                selectedTitle = null
+                selectedAt = 0L
+                clearCached()
+                shouldLoad = true
+            }
+        }
+        if (shouldLoad) loadFor(context.applicationContext, matched, packageName)
+    }
+
     fun activeArtFor(context: Context, packageName: String?): Bitmap? {
         if (Prefs.cocoonImageMode(context) == Prefs.COCOON_MODE_LIVE) return null
         synchronized(lock) {
