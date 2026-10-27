@@ -53,3 +53,14 @@ This APK is a test build; battery usage and emulator behavior require validation
 - Screenshot refresh speed: **Battery saver 25 s**, **Balanced 11 s** (default), **Responsive 6 s**. A still image is also requested soon after switching apps. Never schedule screenshot capture while sleeping, locked, Cocoon HOME, Settings, or if disabled. A faster rate may increase energy use when actively gaming, but sleep mode polling remains off.
 - All bitmap captures remain ephemeral in memory; no persistent uploads or recordings.
 - Physical Retroid Pocket Nova testing required for the overlapping badge, Settings wake and sleep-mode power.
+
+## V6.3 — Cocoon local artwork integration (opt-in, screenshot-first)
+- Keep `Live screenshot` as the unchanged DEFAULT display mode; preserved for all users upgrading.
+- Optional `Cocoon hero / game icon / game logo` image choices. These modes are never activated without explicit user selection.
+- Access Cocoon's chosen data/art folder via Android Storage Access Framework `ACTION_OPEN_DOCUMENT_TREE`, with user-approved READ permission only, persisted for later sessions. The app does not inspect Android private storage or require `MANAGE_EXTERNAL_STORAGE`.
+- Index limited to 3500 images and 7 subdirectory levels, only when user selects/rescans the folder or when the already-enabled integration is initialized while the device is awake. No folder scanning during sleep.
+- Conservative automatic title matching: an exact known artwork title from Cocoon's click/focus Accessibility event just before emulator launch, or from the emulator's window title. No arbitrary package-to-game guess; emulator package alone is NOT evidence of the ROM name.
+- Some versions of Cocoon and emulators do not expose the game title, and some Cocoon images may be named opaque IDs/hashes. In these cases Novalock intentionally falls back to the existing screenshot. Full automatic identification for all emulator/game combinations requires an officially exposed Cocoon playing-game API, documented asset metadata, or user-supported game metadata mapping.
+- Image is decoded in the background ONLY when display is interactive. Temporary bitmaps are in memory; no requests to SteamGridDB, no external networking and no sending personal data.
+- All previous controls, existing play preview, Cocoon HOME, Settings activity-only fix, emulator badge, live screenshot refresh speeds, floating animation, top bar and three-press unlock are retained.
+- Device validation required: Android SAF folder picker and matched game artwork tested with actual Cocoon folder layout. Confirm consistent fallback on unmatched games.
