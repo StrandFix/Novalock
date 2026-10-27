@@ -32,6 +32,16 @@ object CocoonArtworkStore {
     private var cachedImage: Bitmap? = null
     private var indexing = false
     private var attemptedIndex = false
+    // Manual fallback is deliberately session-scoped: an image for one game
+    // is never silently reused when a different game starts in Cocoon.
+    private var pendingManual: Bitmap? = null
+    private var boundManualPackage: String? = null
+    private var manualReady = false
+    private var lastCocoonLabels = "No game title received from Cocoon"
+    private var lastEmulatorLabels = "No game title received from emulator"
+    private var lastForeground = "None"
+    private var indexedExamples = "No index yet"
+    private var lastDecision = "Waiting for an explicit title or manual image"
     @Volatile var status: String = "No Cocoon artwork folder selected"
         private set
 
@@ -52,10 +62,18 @@ object CocoonArtworkStore {
         if (Prefs.cocoonImageMode(context) == Prefs.COCOON_MODE_LIVE) return
         val candidates = texts.map(::normalizeTitle).filter { it.length >= 3 }
         synchronized(lock) {
-            val hit = candidates.firstOrNull { index.containsKey(it) } ?: return
+            if (candidates.isNotEmpty()) {
+                lastCocoonLabels = candidates.joinToString(" | ").take(240)
+            }
+            val hit = candidates.firstOrNull { index.containsKey(it) }
+            if (hit == null) {
+                lastDecision = "Cocoon selection did not exactly match an indexed title"
+                return
+            }
             selectedTitle = hit
             selectedAt = SystemClock.elapsedRealtime()
             status = "Selected game recognized in Cocoon"
+            lastDecision = "Cocoon selected title: $hit"
         }
     }
 
@@ -64,14 +82,29 @@ object CocoonArtworkStore {
         if (Prefs.cocoonImageMode(context) == Prefs.COCOON_MODE_LIVE) return
         if (NovaAppKinds.isCocoon(context, packageName)) {
             synchronized(lock) {
+                lastForeground = packageName
                 assignedPackage = null
                 assignedTitle = null
+                boundManualPackage = null
+                if (!manualReady) {
+                    pendingManual = null
+                }
                 clearCached()
             }
             return
         }
         if (NovaAppKinds.isSettings(context, packageName)) return
         var toLoad: Pair<String, String>? = null
+        synchronized(lock) {
+            lastForeground = packageName
+            if (manualReady && pendingManual != null &&
+                !packageName.startsWith("com.android.") &&
+                !packageName.startsWith("com.google.android.")) {
+                boundManualPackage = packageName
+                manualReady = false
+                lastDecision = "Manual artwork bound to next launched app: $packageName"
+            }
+        }
         synchronized(lock) {
             if (assignedPackage == packageName) return
             val title = selectedTitle
@@ -100,9 +133,15 @@ object CocoonArtworkStore {
             NovaAppKinds.isCocoon(context, packageName) ||
             NovaAppKinds.isSettings(context, packageName)) return
         val matched = synchronized(lock) {
-            texts.map(::normalizeTitle).firstOrNull {
-                it.length >= 3 && index.containsKey(it)
+            val candidates = texts.map(::normalizeTitle).filter { it.length >= 3 }
+            if (candidates.isNotEmpty()) {
+                lastEmulatorLabels = candidates.joinToString(" | ").take(240)
             }
+            val title = candidates.firstOrNull { index.containsKey(it) }
+            if (title == null && candidates.isNotEmpty()) {
+                lastDecision = "Emulator window label did not match indexed titles"
+            }
+            title
         } ?: return
         var shouldLoad = false
         synchronized(lock) {
@@ -121,10 +160,77 @@ object CocoonArtworkStore {
     fun activeArtFor(context: Context, packageName: String?): Bitmap? {
         if (Prefs.cocoonImageMode(context) == Prefs.COCOON_MODE_LIVE) return null
         synchronized(lock) {
+            if (boundManualPackage == packageName) {
+                pendingManual?.takeUnless { it.isRecycled }?.let { return it }
+            }
             if (assignedPackage != packageName || imagePackage != packageName ||
                 imageMode != Prefs.cocoonImageMode(context) || imageTitle != assignedTitle) return null
             return cachedImage?.takeUnless { it.isRecycled }
         }
+    }
+
+    /**
+     * The user explicitly picks an artwork image for the next Cocoon-launched
+     * game. Unlike auto match, this requires no unsupported Cocoon API.
+     */
+    fun chooseManualForNextGame(context: Context, imageUri: Uri, done: (String) -> Unit) {
+        if (Prefs.cocoonImageMode(context) == Prefs.COCOON_MODE_LIVE) {
+            done("Choose Cocoon hero, cover or logo first")
+            return
+        }
+        val app = context.applicationContext
+        Thread({
+            val message = try {
+                val pm = app.getSystemService(Context.POWER_SERVICE) as PowerManager
+                if (!pm.isInteractive) throw IllegalStateException("Screen is sleeping")
+                val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+                app.contentResolver.openInputStream(imageUri)?.use {
+                    BitmapFactory.decodeStream(it, null, bounds)
+                }
+                if (bounds.outWidth <= 0 || bounds.outHeight <= 0) {
+                    throw IllegalArgumentException("Unreadable image")
+                }
+                val sample = maxOf(
+                    1, maxOf(bounds.outWidth, bounds.outHeight) / 1024
+                )
+                val opts = BitmapFactory.Options().apply {
+                    inSampleSize = sample
+                    inPreferredConfig = Bitmap.Config.ARGB_8888
+                }
+                val bitmap = app.contentResolver.openInputStream(imageUri)?.use {
+                    BitmapFactory.decodeStream(it, null, opts)
+                } ?: throw IllegalArgumentException("Invalid image")
+                synchronized(lock) {
+                    pendingManual = bitmap
+                    boundManualPackage = null
+                    manualReady = true
+                    lastDecision = "Manual artwork armed for next game started from Cocoon"
+                }
+                "Manual artwork ready. Open Cocoon and launch the game you chose."
+            } catch (e: Exception) {
+                "Could not read image: ${e.javaClass.simpleName}"
+            }
+            status = message
+            done(message)
+        }, "Novalock-Manual-Artwork").start()
+    }
+
+    fun diagnostics(context: Context): String = synchronized(lock) {
+        listOf(
+            "Novalock Cocoon artwork diagnostics",
+            "Mode: ${Prefs.cocoonImageMode(context)}",
+            "Folder selected: ${selectedFolder(context)}",
+            "Artwork titles in index: ${index.size}",
+            "Example indexed keys: $indexedExamples",
+            "Last Cocoon labels: $lastCocoonLabels",
+            "Last emulator labels: $lastEmulatorLabels",
+            "Last foreground package: $lastForeground",
+            "Assigned title: ${assignedTitle ?: "(none)"}",
+            "Manual image ready: $manualReady",
+            "Manual image assigned to: ${boundManualPackage ?: "(none)"}",
+            "Match decision: $lastDecision",
+            "Last status: $status"
+        ).joinToString("\n")
     }
 
     fun selectedFolder(context: Context): Boolean = Prefs.cocoonFolderUri(context) != null
@@ -225,8 +331,9 @@ object CocoonArtworkStore {
                     assignedPackage = null
                     assignedTitle = null
                     clearCached()
+                    indexedExamples = index.keys.sorted().take(12).joinToString(" | ").take(380)
                 }
-                message = "Indexed ${index.size} game titles from $count images"
+                message = "Indexed ${index.size} artwork keys from $count image files (not confirmed games)"
             } catch (e: Exception) {
                 message = "Cannot read folder: ${e.javaClass.simpleName}. Select the Cocoon data folder."
             } finally {
