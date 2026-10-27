@@ -164,6 +164,54 @@ class SetupActivity : Activity() {
             override fun onNothingSelected(parent: AdapterView<*>?) = Unit
         }
 
+        val cocoonModes = arrayOf(
+            Prefs.COCOON_MODE_LIVE,
+            Prefs.COCOON_MODE_HERO,
+            Prefs.COCOON_MODE_ICON,
+            Prefs.COCOON_MODE_LOGO
+        )
+        val cocoonSpinner = findViewById<Spinner>(R.id.spCocoonArtworkMode)
+        cocoonSpinner.adapter = ArrayAdapter(this, R.layout.spinner_item, arrayOf(
+            "Live screenshot (default)",
+            "Cocoon hero · screenshot if no game match",
+            "Cocoon game icon · screenshot fallback",
+            "Cocoon game logo · screenshot fallback"
+        )).apply { setDropDownViewResource(R.layout.spinner_dropdown_item) }
+        cocoonSpinner.setSelection(
+            cocoonModes.indexOf(Prefs.cocoonImageMode(this)).coerceAtLeast(0)
+        )
+        cocoonSpinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(
+                parent: AdapterView<*>?, view: View?, position: Int, id: Long
+            ) {
+                val mode = cocoonModes[position]
+                if (Prefs.cocoonImageMode(this@SetupActivity) == mode) return
+                Prefs.setCocoonImageMode(this@SetupActivity, mode)
+                CocoonArtworkStore.ensureIndexed(this@SetupActivity)
+                updateCocoonArtStatus()
+            }
+            override fun onNothingSelected(parent: AdapterView<*>?) = Unit
+        }
+        findViewById<Button>(R.id.btnCocoonFolder).setOnClickListener {
+            try {
+                val intent = Intent(Intent.ACTION_OPEN_DOCUMENT_TREE).apply {
+                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or
+                        Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION)
+                }
+                @Suppress("DEPRECATION")
+                startActivityForResult(intent, REQUEST_COCOON_FOLDER)
+            } catch (_: Exception) {
+                Toast.makeText(this, "Folder picker is unavailable", Toast.LENGTH_LONG).show()
+            }
+        }
+        findViewById<Button>(R.id.btnCocoonRescan).setOnClickListener {
+            CocoonArtworkStore.rebuildIndex(this) {
+                runOnUiThread { if (!isFinishing && !isDestroyed) updateCocoonArtStatus() }
+            }
+            updateCocoonArtStatus()
+        }
+        updateCocoonArtStatus()
+
         val cbCapture = findViewById<CheckBox>(R.id.cbNovaCapture)
         cbCapture.isChecked = Prefs.isCaptureEnabled(this)
         captureSpeed.isEnabled = cbCapture.isChecked
@@ -340,6 +388,33 @@ class SetupActivity : Activity() {
     override fun onResume() {
         super.onResume()
         updateStatus()
+        updateCocoonArtStatus()
+    }
+
+    @Suppress("DEPRECATION")
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode != REQUEST_COCOON_FOLDER || resultCode != RESULT_OK) return
+        val uri = data?.data ?: return
+        try {
+            contentResolver.takePersistableUriPermission(
+                uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            CocoonArtworkStore.connectFolder(this, uri) {
+                runOnUiThread {
+                    if (!isFinishing && !isDestroyed) updateCocoonArtStatus()
+                }
+            }
+            updateCocoonArtStatus()
+        } catch (e: Exception) {
+            Toast.makeText(this, "Cannot access the selected folder", Toast.LENGTH_LONG).show()
+        }
+    }
+
+    private fun updateCocoonArtStatus() {
+        findViewById<TextView>(R.id.tvCocoonArtStatus)?.text =
+            if (!CocoonArtworkStore.selectedFolder(this)) {
+                "No folder linked. Select the data folder configured in Cocoon."
+            } else CocoonArtworkStore.status
     }
 
     private fun setTab(newTab: Int) {
@@ -438,5 +513,6 @@ class SetupActivity : Activity() {
     private companion object {
         const val TAB_PERMISSIONS = 0
         const val TAB_OPTIONS = 1
+        const val REQUEST_COCOON_FOLDER = 554
     }
 }
