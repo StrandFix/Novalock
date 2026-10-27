@@ -162,6 +162,7 @@ class NovaCaptureService : AccessibilityService() {
         }
         registerReceiver(screenReceiver, filter)
         receiver = screenReceiver
+        CocoonArtworkStore.ensureIndexed(this)
         scheduleCapture(APP_SWITCH_DELAY_MS)
     }
 
@@ -169,6 +170,9 @@ class NovaCaptureService : AccessibilityService() {
         if (event == null) return
         val pkg = event.packageName?.toString() ?: return
         if (!NovaAppKinds.isSafeApp(pkg)) return
+        if (NovaAppKinds.isCocoon(this, pkg)) {
+            CocoonArtworkStore.ensureIndexed(this)
+        }
         if (NovaAppKinds.isCocoon(this, pkg) &&
             (event.eventType == AccessibilityEvent.TYPE_VIEW_CLICKED ||
              event.eventType == AccessibilityEvent.TYPE_VIEW_FOCUSED)) {
