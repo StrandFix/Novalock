@@ -182,6 +182,8 @@ class NovaCaptureService : AccessibilityService() {
                 this, event.text.map { it.toString() })
         }
         if (event.eventType != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) return
+        CocoonArtworkStore.observeEmulatorWindowTitle(
+            this, pkg, event.text.map { it.toString() })
         val previous = GamePreviewStore.currentPackage
         GamePreviewStore.observeForeground(this, pkg)
         if (NovaAppKinds.isCocoon(this, pkg) ||
