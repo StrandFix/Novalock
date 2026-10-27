@@ -13,7 +13,8 @@ object GamePreviewStore {
         val packageName: String?,
         val bitmap: Bitmap?,
         val isHome: Boolean = false,
-        val isSettings: Boolean = false
+        val isSettings: Boolean = false,
+        val artwork: Bitmap? = null
     )
 
     @Volatile var isLocked: Boolean = false
@@ -32,6 +33,7 @@ object GamePreviewStore {
         if (isLocked || !NovaAppKinds.isSafeApp(name)) return
         if (currentPackage != name) {
             currentPackage = name
+            CocoonArtworkStore.observeForeground(context, name)
             if (NovaAppKinds.isCocoon(context, name) ||
                 NovaAppKinds.isSettings(context, name)) {
                 lastBitmap = null
@@ -79,10 +81,13 @@ object GamePreviewStore {
         }
         val frame = if (!home && !settings && currentFrameFresh &&
             selected == picturePackage) lastBitmap else null
+        val image = if (!home && !settings && selected != null)
+            CocoonArtworkStore.activeArtFor(context, selected) else null
         frozen = Preview(
             selected, frame,
             home || NovaAppKinds.isCocoon(context, selected),
-            settings || NovaAppKinds.isSettings(context, selected)
+            settings || NovaAppKinds.isSettings(context, selected),
+            image
         )
         isLocked = true
     }
