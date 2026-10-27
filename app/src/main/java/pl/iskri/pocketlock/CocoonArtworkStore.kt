@@ -148,7 +148,7 @@ object CocoonArtworkStore {
         }
     }
 
-    fun diagnostics(context: Context): String    fun diagnostics(context: Context): String = synchronized(lock) {
+    fun diagnostics(context: Context): String = synchronized(lock) {
         listOf(
             "Novalock Cocoon artwork diagnostics",
             "Mode: ${Prefs.cocoonImageMode(context)}",
