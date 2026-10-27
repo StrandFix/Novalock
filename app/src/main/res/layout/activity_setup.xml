@@ -424,6 +424,51 @@
                     android:textColor="#FFAFBCC0"
                     android:textSize="12sp" />
 
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="17dp"
+                    android:text="COCOON ARTWORK (OPTIONAL)"
+                    android:textColor="#FF82D3CA"
+                    android:textSize="12sp"
+                    android:textStyle="bold" />
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:text="Live screenshot stays the default. If you choose Cocoon artwork, Novalock displays it only when the game can be identified confidently; otherwise it keeps the screenshot."
+                    android:textColor="#FFB8C1C3"
+                    android:textSize="12sp" />
+                <Spinner
+                    android:id="@+id/spCocoonArtworkMode"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="9dp"
+                    android:background="@drawable/bg_spinner"
+                    android:popupBackground="@drawable/bg_spinner_popup"
+                    android:spinnerMode="dropdown" />
+                <Button
+                    android:id="@+id/btnCocoonFolder"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="9dp"
+                    android:text="Choose Cocoon artwork folder" />
+                <Button
+                    android:id="@+id/btnCocoonRescan"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:text="Refresh artwork index" />
+                <TextView
+                    android:id="@+id/tvCocoonArtStatus"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:layout_marginBottom="10dp"
+                    android:text="Connect a folder to enable optional artwork."
+                    android:textColor="#FFB9CFCA"
+                    android:textSize="12sp" />
+
                 <CheckBox
                     android:id="@+id/cbNovaFloat"
                     android:layout_width="match_parent"
