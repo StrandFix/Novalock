@@ -31,6 +31,7 @@ object CocoonArtworkStore {
     private var imageMode: String? = null
     private var cachedImage: Bitmap? = null
     private var indexing = false
+    private var attemptedIndex = false
     @Volatile var status: String = "No Cocoon artwork folder selected"
         private set
 
@@ -107,6 +108,22 @@ object CocoonArtworkStore {
         rebuildIndex(context, done)
     }
 
+    /** Rebuild once per process, on wake while interactive, if enabled. */
+    fun ensureIndexed(context: Context) {
+        if (Prefs.cocoonImageMode(context) == Prefs.COCOON_MODE_LIVE) return
+        if (!selectedFolder(context)) return
+        val pm = context.getSystemService(Context.POWER_SERVICE) as PowerManager
+        if (!pm.isInteractive || GamePreviewStore.isLocked) return
+        val required = synchronized(lock) {
+            if (attemptedIndex || indexing || index.isNotEmpty()) false
+            else {
+                attemptedIndex = true
+                true
+            }
+        }
+        if (required) rebuildIndex(context)
+    }
+
     /** Explicit refresh: safe to call from settings UI, not from screen-off. */
     fun rebuildIndex(context: Context, done: (String) -> Unit = {}) {
         val tree = Prefs.cocoonFolderUri(context)?.let { Uri.parse(it) }
@@ -121,6 +138,7 @@ object CocoonArtworkStore {
                 return
             }
             indexing = true
+            attemptedIndex = true
             status = "Scanning permitted Cocoon folder..."
         }
         val app = context.applicationContext
