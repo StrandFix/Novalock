@@ -32,7 +32,8 @@ class NovaLockContentView @JvmOverloads constructor(
     fun setDisplayAwake(awake: Boolean) {
         val preview = GamePreviewStore.preview()
         if (!awake || !isAttachedToWindow || !Prefs.isFloatEnabled(context) ||
-            preview.isHome || preview.isSettings || preview.bitmap == null) {
+            preview.isHome || preview.isSettings ||
+            (preview.artwork == null && preview.bitmap == null)) {
             stopFloating()
             return
         }
@@ -194,7 +195,7 @@ class NovaLockContentView @JvmOverloads constructor(
 
     private fun drawGamePreview(canvas: Canvas, w: Float, h: Float,
         preview: GamePreviewStore.Preview) {
-        val picture = preview.bitmap?.takeUnless { it.isRecycled }
+        val picture = (preview.artwork ?: preview.bitmap)?.takeUnless { it.isRecycled }
         val aspect = picture?.let { it.width.toFloat() / it.height } ?: (4f / 3f)
         val cardW = min(w * .79f, h * .47f * aspect)
         val cardH = cardW / aspect
