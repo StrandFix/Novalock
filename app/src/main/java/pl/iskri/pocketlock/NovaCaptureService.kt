@@ -166,9 +166,18 @@ class NovaCaptureService : AccessibilityService() {
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
-        if (event?.eventType != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) return
+        if (event == null) return
         val pkg = event.packageName?.toString() ?: return
         if (!NovaAppKinds.isSafeApp(pkg)) return
+        if (NovaAppKinds.isCocoon(this, pkg) &&
+            (event.eventType == AccessibilityEvent.TYPE_VIEW_CLICKED ||
+             event.eventType == AccessibilityEvent.TYPE_VIEW_FOCUSED)) {
+            // Only read labels on game-selection events originating in Cocoon.
+            // No Android window content traversal and no data transmission.
+            CocoonArtworkStore.observeCocoonSelection(
+                this, event.text.map { it.toString() })
+        }
+        if (event.eventType != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) return
         val previous = GamePreviewStore.currentPackage
         GamePreviewStore.observeForeground(this, pkg)
         if (NovaAppKinds.isCocoon(this, pkg) ||
