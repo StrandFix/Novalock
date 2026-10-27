@@ -142,7 +142,7 @@ object CocoonArtworkStore {
     fun activeArtFor(context: Context, packageName: String?): Bitmap? {
         if (Prefs.cocoonImageMode(context) == Prefs.COCOON_MODE_LIVE) return null
         synchronized(lock) {
-            if (assignedPackage != packageName ||            if (assignedPackage != packageName || imagePackage != packageName ||
+            if (assignedPackage != packageName || imagePackage != packageName ||
                 imageMode != Prefs.cocoonImageMode(context) || imageTitle != assignedTitle) return null
             return cachedImage?.takeUnless { it.isRecycled }
         }
