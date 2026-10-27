@@ -5,6 +5,8 @@ import android.app.Activity
 import android.app.AlertDialog
 import android.app.AppOpsManager
 import android.app.admin.DevicePolicyManager
+import android.content.ClipData
+import android.content.ClipboardManager
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
@@ -210,6 +212,28 @@ class SetupActivity : Activity() {
             }
             updateCocoonArtStatus()
         }
+        findViewById<Button>(R.id.btnCocoonManual).setOnClickListener {
+            if (Prefs.cocoonImageMode(this) == Prefs.COCOON_MODE_LIVE) {
+                Toast.makeText(this, "Select Cocoon hero, icon or logo first",
+                    Toast.LENGTH_LONG).show()
+            } else {
+                val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+                    type = "image/*"
+                    addCategory(Intent.CATEGORY_OPENABLE)
+                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or
+                        Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION)
+                }
+                @Suppress("DEPRECATION")
+                startActivityForResult(intent, REQUEST_COCOON_MANUAL_ART)
+            }
+        }
+        findViewById<Button>(R.id.btnCocoonDiagnostics).setOnClickListener {
+            val report = CocoonArtworkStore.diagnostics(this)
+            val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+            clipboard.setPrimaryClip(ClipData.newPlainText(
+                "Novalock Cocoon diagnostics", report))
+            Toast.makeText(this, "Cocoon diagnostics copied", Toast.LENGTH_LONG).show()
+        }
         updateCocoonArtStatus()
 
         val cbCapture = findViewById<CheckBox>(R.id.cbNovaCapture)
@@ -394,8 +418,26 @@ class SetupActivity : Activity() {
     @Suppress("DEPRECATION")
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
-        if (requestCode != REQUEST_COCOON_FOLDER || resultCode != RESULT_OK) return
+        if (resultCode != RESULT_OK) return
         val uri = data?.data ?: return
+        if (requestCode == REQUEST_COCOON_MANUAL_ART) {
+            try {
+                contentResolver.takePersistableUriPermission(
+                    uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            } catch (_: SecurityException) {
+                // Some providers grant the current activity read access only.
+            }
+            CocoonArtworkStore.chooseManualForNextGame(this, uri) { message ->
+                runOnUiThread {
+                    if (!isFinishing && !isDestroyed) {
+                        updateCocoonArtStatus()
+                        Toast.makeText(this, message, Toast.LENGTH_LONG).show()
+                    }
+                }
+            }
+            return
+        }
+        if (requestCode != REQUEST_COCOON_FOLDER) return
         try {
             contentResolver.takePersistableUriPermission(
                 uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
@@ -514,5 +556,6 @@ class SetupActivity : Activity() {
         const val TAB_PERMISSIONS = 0
         const val TAB_OPTIONS = 1
         const val REQUEST_COCOON_FOLDER = 554
+        const val REQUEST_COCOON_MANUAL_ART = 555
     }
 }
