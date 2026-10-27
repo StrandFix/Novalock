@@ -48,6 +48,13 @@ object Prefs {
     private const val KEY_NOVA_DOT_MIGRATION = "nova_dot_defaults_v3"
     private const val KEY_CAPTURE_ENABLED = "nova_capture_enabled"
     private const val KEY_CAPTURE_INTERVAL = "nova_capture_interval_ms"
+    private const val KEY_COCOON_IMAGE_MODE = "nova_cocoon_image_mode"
+    private const val KEY_COCOON_TREE_URI = "nova_cocoon_tree_uri"
+
+    const val COCOON_MODE_LIVE = "live"
+    const val COCOON_MODE_HERO = "hero"
+    const val COCOON_MODE_ICON = "icon"
+    const val COCOON_MODE_LOGO = "logo"
     private const val KEY_EMULATOR_BADGE = "nova_preview_icon_badge"
 
     const val CAPTURE_SAVER_MS = 25_000L
@@ -343,6 +350,30 @@ object Prefs {
             edit.putFloat(KEY_DOT_SPACING, .60f)
         }
         edit.putBoolean(KEY_NOVA_DOT_MIGRATION, true).apply()
+    }
+
+    /** Live screenshot is intentionally preserved as the default after upgrades. */
+    fun cocoonImageMode(context: Context): String {
+        val mode = sp(context).getString(KEY_COCOON_IMAGE_MODE, COCOON_MODE_LIVE)
+        return when (mode) {
+            COCOON_MODE_HERO, COCOON_MODE_ICON, COCOON_MODE_LOGO -> mode
+            else -> COCOON_MODE_LIVE
+        }
+    }
+
+    fun setCocoonImageMode(context: Context, mode: String) {
+        val value = when (mode) {
+            COCOON_MODE_HERO, COCOON_MODE_ICON, COCOON_MODE_LOGO -> mode
+            else -> COCOON_MODE_LIVE
+        }
+        sp(context).edit().putString(KEY_COCOON_IMAGE_MODE, value).apply()
+    }
+
+    fun cocoonFolderUri(context: Context): String? =
+        sp(context).getString(KEY_COCOON_TREE_URI, null)
+
+    fun setCocoonFolderUri(context: Context, uri: String) {
+        sp(context).edit().putString(KEY_COCOON_TREE_URI, uri).apply()
     }
 
     /** Small app/emulator badge at the lower-left of a captured game screenshot. */
