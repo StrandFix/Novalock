@@ -41,11 +41,16 @@ object CocoonTitleRecognizer {
             return
         }
         lastAttemptAt = now
+        val frameTakenAt = now
         try {
             recognizer.process(InputImage.fromBitmap(bitmap, 0))
                 .addOnSuccessListener { result ->
+                    // The selected game's launch animation can leave
+                    // Cocoon before OCR completes. Retain this *Cocoon-only*
+                    // frame result briefly so it can bind to the emulator
+                    // that just opened (never use a stale result).
                     if (!pm.isInteractive || GamePreviewStore.isLocked ||
-                        !NovaAppKinds.isCocoon(app, GamePreviewStore.currentPackage)) return@addOnSuccessListener
+                        SystemClock.elapsedRealtime() - frameTakenAt > 6000L) return@addOnSuccessListener
                     val labels = result.textBlocks.flatMap { block ->
                         buildList {
                             add(block.text)
@@ -54,7 +59,7 @@ object CocoonTitleRecognizer {
                     }.distinct().filter { it.isNotBlank() }
                     report = if (labels.isEmpty()) "No visible Cocoon game-title text read"
                         else "Read ${labels.size} text candidates (title match checked)"
-                    CocoonArtworkStore.observeVisibleTitle(app, labels)
+                    CocoonArtworkStore.observeVisibleTitle(app, labels, frameTakenAt)
                 }
                 .addOnFailureListener { e ->
                     report = "Offline OCR unavailable: ${e.javaClass.simpleName}"
