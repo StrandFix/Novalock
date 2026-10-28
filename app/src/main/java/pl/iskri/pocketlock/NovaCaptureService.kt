@@ -14,6 +14,7 @@ import android.os.PowerManager
 import android.util.Log
 import android.view.Display
 import android.view.accessibility.AccessibilityEvent
+import android.view.accessibility.AccessibilityNodeInfo
 import java.lang.ref.WeakReference
 
 /**
@@ -47,6 +48,52 @@ class NovaCaptureService : AccessibilityService() {
     private var busy = false
     private var receiver: BroadcastReceiver? = null
     private val sampler = Runnable { captureIfReady() }
+    private var lastCocoonNodeReadAt = 0L
+
+    /**
+     * Only inspect the actually clicked/focused Cocoon game card. Do not
+     * traverse every tile on the HOME grid (the prior image/OCR approach
+     * generated incorrect titles from unrelated visible games).
+     */
+    private fun selectedCocoonLabels(event: AccessibilityEvent): List<String> {
+        val output = LinkedHashSet<String>()
+        var visited = 0
+        fun addNode(node: AccessibilityNodeInfo?, depth: Int) {
+            if (node == null || depth > 2 || visited >= 18) return
+            val pkg = node.packageName?.toString()
+            if (!NovaAppKinds.isCocoon(this, pkg)) return
+            visited++
+            node.text?.toString()?.trim()?.takeIf { it.isNotEmpty() }?.let(output::add)
+            node.contentDescription?.toString()?.trim()
+                ?.takeIf { it.isNotEmpty() }?.let(output::add)
+            if (depth < 2) {
+                for (i in 0 until minOf(node.childCount, 12)) {
+                    if (visited >= 18) break
+                    addNode(node.getChild(i), depth + 1)
+                }
+            }
+        }
+        event.text.forEach { text ->
+            text?.toString()?.trim()?.takeIf { it.isNotEmpty() }?.let(output::add)
+        }
+        val source = try { event.source } catch (_: Exception) { null }
+        addNode(source, 0)
+        if (output.isEmpty()) {
+            // Some Flutter/native views expose the label on their closest
+            // container rather than on the clicked image itself.
+            addNode(try { source?.parent } catch (_: Exception) { null }, 1)
+        }
+        if (output.isEmpty()) {
+            // Controller focus may not be the same node as event.source.
+            val root = try { rootInActiveWindow } catch (_: Exception) { null }
+            if (NovaAppKinds.isCocoon(this, root?.packageName?.toString())) {
+                addNode(root?.findFocus(AccessibilityNodeInfo.FOCUS_INPUT), 0)
+                if (output.isEmpty())
+                    addNode(root?.findFocus(AccessibilityNodeInfo.FOCUS_ACCESSIBILITY), 0)
+            }
+        }
+        return output.take(18)
+    }
     private fun scheduleCapture(afterMs: Long) {
         handler.removeCallbacks(sampler)
         val power = getSystemService(Context.POWER_SERVICE) as PowerManager
@@ -171,6 +218,19 @@ class NovaCaptureService : AccessibilityService() {
         if (!NovaAppKinds.isSafeApp(pkg)) return
         if (NovaAppKinds.isCocoon(this, pkg)) {
             CocoonArtworkStore.ensureIndexed(this)
+            val selectedEvent = event.eventType == AccessibilityEvent.TYPE_VIEW_FOCUSED ||
+                event.eventType == AccessibilityEvent.TYPE_VIEW_SELECTED ||
+                event.eventType == AccessibilityEvent.TYPE_VIEW_CLICKED ||
+                event.eventType == AccessibilityEvent.TYPE_VIEW_ACCESSIBILITY_FOCUSED
+            if (selectedEvent && awakeAndPlaying()) {
+                val now = android.os.SystemClock.elapsedRealtime()
+                if (now - lastCocoonNodeReadAt > 75L) {
+                    lastCocoonNodeReadAt = now
+                    val labels = selectedCocoonLabels(event)
+                    CocoonArtworkStore.observeCocoonGameSelection(
+                        this, AccessibilityEvent.eventTypeToString(event.eventType), labels)
+                }
+            }
         }
         if (event.eventType != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) return
         // The emulator's actual game/window title is our source of truth.
