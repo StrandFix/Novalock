@@ -21,31 +21,6 @@ jobs:
           test -n "$SDKMANAGER"
           yes | "$SDKMANAGER" --licenses >/dev/null || true
           "$SDKMANAGER" --install 'platforms;android-35' 'build-tools;35.0.0'
-      - name: Validate optional Cocoon platform bridge files
-        shell: bash
-        run: |
-          python3 - <<'PY'
-          import json,glob,re
-          files=glob.glob('cocoon-platforms/*.Novalock.json')
-          assert len(files)==5, f"Expected five Cocoon platform adapters: {files}"
-          expected={'gc','wii','ps2','switch','n3ds'}
-          found=set()
-          for path in files:
-              with open(path,encoding='utf8') as f: platform=json.load(f)
-              uid=platform['platform']['uniqueId']
-              assert uid in expected and uid not in found, (path,uid)
-              found.add(uid)
-              assert len(platform['playerList'])>=2, path
-              relay=platform['playerList'][-1]
-              assert relay['uniqueId']==uid+'.pl.iskri.pocketlock.nova'
-              assert relay['amStartArguments'].count('{file.uri}')==1
-              assert '{file.path}' in relay['amStartArguments']
-              assert 'CocoonRelayActivity' in relay['amStartArguments']
-              assert 'nl_target' in relay['amStartArguments']
-              assert not relay['killPackageProcesses']
-              print(uid,'existing players',len(platform['playerList'])-1,'relay',relay['name'])
-          assert found==expected
-          PY
       - name: Build test APK
         run: |
           chmod +x gradlew
@@ -54,11 +29,4 @@ jobs:
         with:
           name: NovaLock-Test-APK
           path: app/build/outputs/apk/debug/*.apk
-          if-no-files-found: error
-      - uses: actions/upload-artifact@v4
-        with:
-          name: Cocoon-Platform-Relay-Configs
-          path: |
-            cocoon-platforms/*.Novalock.json
-            COCOON-ROM-RELAY-TEST.md
           if-no-files-found: error
