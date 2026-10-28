@@ -45,6 +45,33 @@ object NovaAppKinds {
     fun isRetroArch(packageName: String?): Boolean =
         packageName?.startsWith("com.retroarch") == true
 
+    /**
+     * Bound Cocoon-selected game art only to a plausible emulator launch,
+     * not a browser, phone Settings, file manager or app store.
+     * The emulator's own window-title detection remains independent.
+     */
+    fun isLikelyEmulator(context: Context, packageName: String?): Boolean {
+        if (packageName.isNullOrBlank() || isCocoon(context, packageName) ||
+            isSettings(context, packageName) || !isSafeApp(packageName)) return false
+        val token = packageName.lowercase(java.util.Locale.ROOT)
+        if (listOf(
+                "dolphin", "retroarch", "yuzu", "eden", "sudachi", "suyu",
+                "azahar", "citra", "duckstation", "aethersx2", "nethersx2",
+                "ppsspp", "melonds", "drastic", "pizzaboy", "pizza.boy",
+                "redream", "flycast", "mupen", "n64", "snes9x", "epsxe",
+                "lime3ds", "lemuroid", "vita3k", "scummvm", "dosbox",
+                "cynth", "pcsx", "skyline", "ryujinx", "retrobox"
+            ).any { it in token }) return true
+        return try {
+            val pm = context.packageManager
+            val label = pm.getApplicationLabel(
+                pm.getApplicationInfo(packageName, 0)
+            ).toString().lowercase(java.util.Locale.ROOT)
+            label.contains("emulator") || label.contains("emulation") ||
+                label.contains("retroarch")
+        } catch (_: Exception) { false }
+    }
+
     fun isSafeApp(packageName: String?): Boolean =
         !packageName.isNullOrBlank() &&
         !packageName.startsWith("pl.iskri.pocketlock") &&
