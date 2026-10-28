@@ -5,6 +5,7 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
 import android.os.PowerManager
+import android.os.SystemClock
 import android.provider.DocumentsContract
 import java.text.Normalizer
 import java.util.Locale
@@ -29,6 +30,12 @@ object CocoonArtworkStore {
     private var scanning = false
     private var scanAttempted = false
 
+    private var pendingCocoonGame: String? = null
+    private var pendingCocoonAt: Long = 0L
+    private var lastCocoonSelectionEvent = "(no selected Cocoon node yet)"
+    private var lastCocoonSelectionLabels = "(none)"
+    private var lastCocoonSelectionMatch = "(none)"
+    private var cocoonSelectionEventCount = 0
     private var assignedPackage: String? = null
     private var assignedTitle: String? = null
     private var imagePackage: String? = null
@@ -62,6 +69,7 @@ object CocoonArtworkStore {
         "covers", "grid", "grids", "boxart", "backgrounds", "background"
     )
 
+    private const val COCOON_SELECTION_MAX_AGE_MS = 20_000L
     private const val MAX_IMAGES = 3500
     private const val MAX_DEPTH = 7
     private val generatedSuffix = Regex(
@@ -215,21 +223,98 @@ object CocoonArtworkStore {
         }
     }
 
+    /**
+     * A genuine Cocoon accessibility focus/selection/click event provides
+     * a candidate for the NEXT emulator launch. We never assign a title
+     * based on all-visible tiles, fuzzy image scores or arbitrary HOME text.
+     *
+     * The event's focused or clicked node must uniquely resolve to one game
+     * in the user's previously granted local artwork folder.
+     */
+    fun observeCocoonGameSelection(
+        context: Context, eventType: String, labels: List<String>
+    ) {
+        if (Prefs.cocoonImageMode(context) == Prefs.COCOON_MODE_LIVE ||
+            GamePreviewStore.isLocked || !selectedFolder(context)) return
+        val normalized = labels.map(::normalizeTitle)
+            .filter { it.length >= 4 }.distinct().take(18)
+        synchronized(lock) {
+            cocoonSelectionEventCount++
+            lastCocoonSelectionEvent = eventType
+            lastCocoonSelectionLabels = normalized.take(6)
+                .joinToString(" | ").take(230).ifEmpty { "(no exposed text)" }
+            // Match titles from the selected node, not other tiles in the grid.
+            val matches = normalized.mapNotNull { label ->
+                resolveTitleLocked(label, Prefs.cocoonImageMode(context))
+            }
+            val stems = matches.map { gameTitleStem(it.gameKey) }.distinct()
+            if (stems.size != 1) {
+                lastCocoonSelectionMatch = when {
+                    normalized.isEmpty() -> "Selected Cocoon node has no readable game title"
+                    stems.isEmpty() -> "Selected node text does not match a game image"
+                    else -> "Selected Cocoon node contains multiple game titles"
+                }
+                // Clear previously selected title on a *new* focused/clicked
+                // item that does not match; never reuse a stale game.
+                pendingCocoonGame = null
+                pendingCocoonAt = 0L
+                return
+            }
+            val best = matches.first()
+            if (best.gameKey in platformKeys) return
+            pendingCocoonGame = best.gameKey
+            pendingCocoonAt = SystemClock.elapsedRealtime()
+            lastCocoonSelectionMatch = "Selected game: ${best.gameKey}"
+            lastDecision = "Cocoon selected game before emulator launch: ${best.gameKey}"
+            status = lastDecision
+        }
+    }
+
     fun observeForeground(context: Context, packageName: String) {
         if (Prefs.cocoonImageMode(context) == Prefs.COCOON_MODE_LIVE) return
+        var loading: Triple<String, String, Long>? = null
+        val mode = Prefs.cocoonImageMode(context)
         synchronized(lock) {
-            // Game art must not leak across home screens or emulator changes.
-            if (NovaAppKinds.isCocoon(context, packageName) ||
-                NovaAppKinds.isSettings(context, packageName)) {
+            if (NovaAppKinds.isCocoon(context, packageName)) {
                 resetAssignmentLocked()
-                status = "Cocoon HOME / Settings: game art cleared"
+                // Do not erase the latest focused game merely because the
+                // Cocoon window itself changes during launch animation.
+                status = "Cocoon HOME; awaiting emulator game launch"
+                return
+            }
+            if (NovaAppKinds.isSettings(context, packageName)) {
+                resetAssignmentLocked()
+                pendingCocoonGame = null
+                pendingCocoonAt = 0L
+                status = "Settings opened; game artwork cleared"
                 return
             }
             if (assignedPackage != null && assignedPackage != packageName) {
                 resetAssignmentLocked()
                 lastDecision = "Emulator changed; waiting for new game title"
-                status = lastDecision
             }
+            val selected = pendingCocoonGame
+            val fresh = pendingCocoonAt != 0L &&
+                SystemClock.elapsedRealtime() - pendingCocoonAt in 0..COCOON_SELECTION_MAX_AGE_MS
+            if (selected != null && fresh && !GamePreviewStore.isLocked) {
+                val art = index[selected]?.let { it[mode] ?: it["any"] }
+                if (art != null) {
+                    resetAssignmentLocked()
+                    assignedPackage = packageName
+                    assignedTitle = selected
+                    generation += 1
+                    loading = Triple(selected, packageName, generation)
+                    lastDecision = "Cocoon selected title bound to emulator: $selected"
+                    status = "Loading Cocoon $mode for $selected"
+                } else {
+                    lastDecision = "Cocoon selected '$selected' but chosen $mode image unavailable"
+                }
+            }
+            pendingCocoonGame = null
+            pendingCocoonAt = 0L
+        }
+        loading?.let { (key, pkg, token) ->
+            loadFor(context.applicationContext, key, pkg, mode, token)
         }
     }
 
@@ -418,6 +503,11 @@ object CocoonArtworkStore {
             "Folder selected: ${selectedFolder(context)}",
             "Game keys in index: ${index.size}",
             "Example indexed keys: $indexedExamples",
+            "Cocoon selection events: $cocoonSelectionEventCount",
+            "Last Cocoon selection event: $lastCocoonSelectionEvent",
+            "Selected-node text: $lastCocoonSelectionLabels",
+            "Selected-node result: $lastCocoonSelectionMatch",
+            "Pending Cocoon game: ${pendingCocoonGame ?: "(none)"}",
             "Last emulator title: $lastEmulatorTitle",
             "Last emulator package: $lastEmulatorPackage",
             "Matching indexed keys: $lastMatchingKeys",
