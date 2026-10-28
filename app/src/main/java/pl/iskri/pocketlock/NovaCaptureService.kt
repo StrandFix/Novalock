@@ -47,103 +47,6 @@ class NovaCaptureService : AccessibilityService() {
     private var busy = false
     private var receiver: BroadcastReceiver? = null
     private val sampler = Runnable { captureIfReady() }
-    private var cocoonCaptureBusy = false
-    private var cocoonSampleScheduled = false
-    private var cocoonNextDueAt = Long.MAX_VALUE
-    private val cocoonSampler = Runnable {
-        cocoonSampleScheduled = false
-        cocoonNextDueAt = Long.MAX_VALUE
-        captureCocoonArtworkFrame()
-    }
-
-    private fun cocoonReady(): Boolean {
-        val power = getSystemService(Context.POWER_SERVICE) as PowerManager
-        return power.isInteractive && !GamePreviewStore.isLocked &&
-            Prefs.isEnabled(this) &&
-            Prefs.cocoonImageMode(this) != Prefs.COCOON_MODE_LIVE &&
-            NovaAppKinds.isCocoon(this, GamePreviewStore.currentPackage)
-    }
-
-    private fun scheduleCocoonFrame(delayMs: Long) {
-        if (!cocoonReady()) return
-        val dueAt = android.os.SystemClock.uptimeMillis() + delayMs
-        if (cocoonSampleScheduled && dueAt >= cocoonNextDueAt) return
-        handler.removeCallbacks(cocoonSampler)
-        cocoonSampleScheduled = true
-        cocoonNextDueAt = dueAt
-        handler.postDelayed(cocoonSampler, delayMs)
-    }
-
-    /**
-     * Only the visible Cocoon UI, while awake, is sampled. This catches the
-     * selected hero and Cocoon 3.1's full-screen game launch animation.
-     */
-    private fun captureCocoonArtworkFrame() {
-        if (!cocoonReady()) return
-        if (cocoonCaptureBusy) {
-            scheduleCocoonFrame(1900L)
-            return
-        }
-        cocoonCaptureBusy = true
-        try {
-            takeScreenshot(Display.DEFAULT_DISPLAY, mainExecutor,
-                object : TakeScreenshotCallback {
-                    override fun onSuccess(result: ScreenshotResult) {
-                        cocoonCaptureBusy = false
-                        try {
-                            val buffer = result.hardwareBuffer
-                            try {
-                                if (!cocoonReady()) return
-                                val hardware = Bitmap.wrapHardwareBuffer(
-                                    buffer, result.colorSpace)
-                                val copy = hardware?.copy(Bitmap.Config.ARGB_8888, false)
-                                    ?: return
-                                // OCR needs readable letters. Preserve up
-                                // to 960px instead of using the 480px dHash
-                                // thumbnail. Both consumers own/recycle their
-                                // own copies asynchronously.
-                                val edge = maxOf(copy.width, copy.height)
-                                val ocrFrame = if (edge > 960) {
-                                    val ratio = 960f / edge
-                                    Bitmap.createScaledBitmap(copy,
-                                        (copy.width * ratio).toInt().coerceAtLeast(1),
-                                        (copy.height * ratio).toInt().coerceAtLeast(1),
-                                        true).also { copy.recycle() }
-                                } else copy
-                                val currentEdge = maxOf(ocrFrame.width, ocrFrame.height)
-                                val visualFrame = if (currentEdge > 480) {
-                                    val ratio = 480f / currentEdge
-                                    Bitmap.createScaledBitmap(ocrFrame,
-                                        (ocrFrame.width * ratio).toInt().coerceAtLeast(1),
-                                        (ocrFrame.height * ratio).toInt().coerceAtLeast(1), true)
-                                } else ocrFrame.copy(Bitmap.Config.ARGB_8888, false)
-                                CocoonTitleRecognizer.scanCocoonFrame(
-                                    this@NovaCaptureService, ocrFrame)
-                                CocoonVisualMatcher.matchFrame(
-                                    this@NovaCaptureService, visualFrame) { key, _, _ ->
-                                    CocoonArtworkStore.observeVisualMatch(
-                                        this@NovaCaptureService, key)
-                                }
-                            } finally {
-                                buffer.close()
-                            }
-                        } catch (e: Exception) {
-                            Log.d("NovaCapture", "Cocoon local frame unreadable", e)
-                        }
-                        if (cocoonReady()) scheduleCocoonFrame(2300L)
-                    }
-
-                    override fun onFailure(errorCode: Int) {
-                        cocoonCaptureBusy = false
-                        if (cocoonReady()) scheduleCocoonFrame(2300L)
-                    }
-                })
-        } catch (e: Exception) {
-            cocoonCaptureBusy = false
-            if (cocoonReady()) scheduleCocoonFrame(2300L)
-        }
-    }
-
     private fun scheduleCapture(afterMs: Long) {
         handler.removeCallbacks(sampler)
         val power = getSystemService(Context.POWER_SERVICE) as PowerManager
@@ -246,16 +149,9 @@ class NovaCaptureService : AccessibilityService() {
         val screenReceiver = object : BroadcastReceiver() {
             override fun onReceive(context: Context, intent: Intent) {
                 when (intent.action) {
-                    Intent.ACTION_SCREEN_OFF -> {
-                        handler.removeCallbacks(sampler)
-                        handler.removeCallbacks(cocoonSampler)
-                        cocoonSampleScheduled = false
-                        cocoonNextDueAt = Long.MAX_VALUE
-                    }
-                    Intent.ACTION_SCREEN_ON -> if (!GamePreviewStore.isLocked) {
+                    Intent.ACTION_SCREEN_OFF -> handler.removeCallbacks(sampler)
+                    Intent.ACTION_SCREEN_ON -> if (!GamePreviewStore.isLocked)
                         scheduleCapture(APP_SWITCH_DELAY_MS)
-                        scheduleCocoonFrame(800L)
-                    }
                 }
             }
         }
@@ -267,7 +163,6 @@ class NovaCaptureService : AccessibilityService() {
         receiver = screenReceiver
         CocoonArtworkStore.ensureIndexed(this)
         scheduleCapture(APP_SWITCH_DELAY_MS)
-        scheduleCocoonFrame(1000L)
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
@@ -276,28 +171,14 @@ class NovaCaptureService : AccessibilityService() {
         if (!NovaAppKinds.isSafeApp(pkg)) return
         if (NovaAppKinds.isCocoon(this, pkg)) {
             CocoonArtworkStore.ensureIndexed(this)
-            val quick = event.eventType == AccessibilityEvent.TYPE_VIEW_CLICKED ||
-                event.eventType == AccessibilityEvent.TYPE_VIEW_SELECTED ||
-                event.eventType == AccessibilityEvent.TYPE_VIEW_FOCUSED ||
-                event.eventType == AccessibilityEvent.TYPE_VIEW_ACCESSIBILITY_FOCUSED
-            scheduleCocoonFrame(if (quick) 175L else 450L)
-        }
-        if (NovaAppKinds.isCocoon(this, pkg) &&
-            (event.eventType == AccessibilityEvent.TYPE_VIEW_CLICKED ||
-             event.eventType == AccessibilityEvent.TYPE_VIEW_FOCUSED)) {
-            // Only read labels on game-selection events originating in Cocoon.
-            // No Android window content traversal and no data transmission.
-            CocoonArtworkStore.observeCocoonSelection(
-                this, event.text.map { it.toString() })
         }
         if (event.eventType != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) return
+        // The emulator's actual game/window title is our source of truth.
         CocoonArtworkStore.observeEmulatorWindowTitle(
             this, pkg, event.text.map { it.toString() })
         val previous = GamePreviewStore.currentPackage
         GamePreviewStore.observeForeground(this, pkg)
-        // The first Cocoon event is received before currentPackage is updated.
-        // Ensure a frame is scheduled after Cocoon becomes the foreground app.
-        if (NovaAppKinds.isCocoon(this, pkg)) scheduleCocoonFrame(210L)
+        // No HOME screenshot scanning: only running-game previews.
         if (NovaAppKinds.isCocoon(this, pkg) ||
             NovaAppKinds.isSettings(this, pkg)) {
             // Neither Home nor Settings needs a screenshot or a pending timer.
@@ -312,8 +193,6 @@ class NovaCaptureService : AccessibilityService() {
     override fun onDestroy() {
         isConnected = false
         handler.removeCallbacks(sampler)
-        handler.removeCallbacks(cocoonSampler)
-        cocoonSampleScheduled = false
         receiver?.let {
             try { unregisterReceiver(it) } catch (_: Exception) {}
         }
