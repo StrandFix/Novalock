@@ -36,6 +36,15 @@
             </intent-filter>
         </activity>
 
+        <!-- Optional Cocoon per-platform ROM relay. Explicit-intent only,
+             no implicit ACTION_VIEW interception of unrelated apps. -->
+        <activity
+            android:name=".CocoonRelayActivity"
+            android:exported="true"
+            android:excludeFromRecents="true"
+            android:noHistory="true"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
+
         <activity
             android:name=".AppearanceActivity"
             android:exported="false" />
