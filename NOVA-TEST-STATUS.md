@@ -72,3 +72,12 @@ This APK is a test build; battery usage and emulator behavior require validation
 - Cocoon-only frame sampling (~2.3 s, scoped while foreground, opted in) stops on screen-off, locking, or Cocoon exit. Existing game screenshots 6/11/25 seconds, HOME, Settings security, battery and 3-button unlock untouched.
 - Screenshot remains default. User must select Cocoon hero/icon/logo to enable feature; no per-game controls. Existing diagnostic copy button includes last visual match confidence.
 - CRITICAL: Android build verifies syntax, not runtime recognition. Must verify physical Retro Pocket Nova capture timing and actual Cocoon folder names/images, and adjust matching if needed. Never claim guaranteed auto identification until this succeeds.
+
+## V6.5 — Cocoon edit-image duplicate false ambiguity fix
+- On-device V6.4 diagnostic: 818 index keys from 1249 images, examples like "adventure island part ii the europe cocoon edit 48 <hex>". No Cocoon accessibility title; emulator returned "armsx2"; visual best and runner-up scores were both 1/64.
+- Root cause: generated edit/hash suffixes were incorrectly treated as game identity. A game's multiple image versions became different "games" and tied. Visual matcher therefore declined to select one.
+- V6.5 canonicalizes generated suffixes (Cocoon Edit 48 + hex, edit + hex) while retaining identifying title and region; folder-based fallback for opaque image names. Distinct images are still indexed under one canonical game key; runner-up competition is between different titles only.
+- Full set of variants retained across sleep-interrupted visual indexing. Diagnostic displays the top two canonical game names and scores if ambiguous.
+- Conservative 15-bit threshold and 6-bit best-vs-distinct-game margin unchanged. If two DIFFERENT games still tie, retain live screenshot; do not show a guessed image.
+- No extra privileges, online accounts, manual per-game selections or screenshot polling while screen-off. V6.4 HOME, Settings, game captures, charging and three-press unlock remain untouched.
+- Must verify on physical Retroid Pocket Nova: refresh artwork index (required to migrate file keys), start game from Cocoon, and share new diagnostic if fallback persists.
