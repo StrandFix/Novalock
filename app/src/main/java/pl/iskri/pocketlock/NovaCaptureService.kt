@@ -15,6 +15,7 @@ import android.os.Looper
 import android.os.PowerManager
 import android.util.Log
 import android.view.Display
+import android.view.WindowManager
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
 import java.lang.ref.WeakReference
@@ -68,7 +69,7 @@ class NovaCaptureService : AccessibilityService() {
 
         val realSize = Point()
         @Suppress("DEPRECATION")
-        val screen = windowManager.defaultDisplay
+        val screen = (getSystemService(Context.WINDOW_SERVICE) as WindowManager).defaultDisplay
         @Suppress("DEPRECATION")
         screen.getRealSize(realSize)
         if (realSize.x < 100 || realSize.y < 100) return
