@@ -32,6 +32,8 @@ object CocoonVisualMatcher {
     private var signatures: List<Fingerprint> = emptyList()
     private val building = AtomicBoolean(false)
     private val matching = AtomicBoolean(false)
+    @Volatile private var fullyIndexed = false
+    fun needsBuild(): Boolean = !fullyIndexed && !building.get()
     @Volatile var report: String = "Visual artwork index not yet built"
         private set
 
@@ -41,10 +43,12 @@ object CocoonVisualMatcher {
 
     fun rebuild(context: Context, images: List<ArtworkReference>) {
         if (!building.compareAndSet(false, true)) return
+        fullyIndexed = false
         val app = context.applicationContext
         Thread({
             val out = ArrayList<Fingerprint>()
             var failed = 0
+            var interruptedBySleep = false
             try {
                 val power = app.getSystemService(Context.POWER_SERVICE) as PowerManager
                 for (image in images
@@ -52,7 +56,8 @@ object CocoonVisualMatcher {
                     .distinctBy { it.uri.toString() }
                     .take(MAX_VISUAL_ARTWORK)) {
                     if (!power.isInteractive || GamePreviewStore.isLocked) {
-                        report = "Visual indexing paused because the device is sleeping"
+                        interruptedBySleep = true
+                        report = "Visual indexing paused until the screen is awake"
                         break
                     }
                     try {
@@ -84,7 +89,10 @@ object CocoonVisualMatcher {
                     } catch (_: Exception) { failed++ }
                 }
                 synchronized(lock) { signatures = out.toList() }
-                report = "Visual index: ${out.size} image fingerprints; $failed unreadable"
+                fullyIndexed = !interruptedBySleep
+                report = if (interruptedBySleep)
+                    "Visual indexing paused after ${out.size} images; resumes next wake"
+                else "Visual index ready: ${out.size} image fingerprints; $failed unreadable"
             } finally {
                 building.set(false)
             }
