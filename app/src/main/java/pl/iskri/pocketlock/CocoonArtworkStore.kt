@@ -52,6 +52,7 @@ object CocoonArtworkStore {
     private var indexedExamples = "(not indexed)"
     private var lastRelay = "No Cocoon ROM intent received"
     private var lastRelayMatch = "(none)"
+    private var relayHandoffAt: Long = 0L
     @Volatile var status: String = "Select the Cocoon artwork folder"
         private set
 
@@ -188,6 +189,13 @@ object CocoonArtworkStore {
         synchronized(lock) {
             lastEmulatorTitle = labels.joinToString(" | ").take(240)
             lastEmulatorPackage = packageName
+            // An explicit Cocoon ROM URI is stronger evidence than a generic
+            // Android emulator window label such as "Dolphin Emulator".
+            if (assignedPackage == packageName && assignedTitle != null &&
+                SystemClock.elapsedRealtime() - relayHandoffAt < 120_000L) {
+                lastDecision = "Cocoon ROM identity retained: $assignedTitle"
+                return
+            }
             val choices = labels.mapNotNull { label ->
                 resolveTitleLocked(label, mode)?.let { label to it }
             }
@@ -290,6 +298,7 @@ object CocoonArtworkStore {
         var loading: Triple<String, String, Long>? = null
         synchronized(lock) {
             lastRelay = "Cocoon -> $routeName -> $targetPackage : ${normalizeTitle(romName).take(150)}"
+            relayHandoffAt = SystemClock.elapsedRealtime()
             if (mode == Prefs.COCOON_MODE_LIVE || GamePreviewStore.isLocked) {
                 lastRelayMatch = "Live screenshot mode, relay forwarded ROM unchanged"
                 return
@@ -329,9 +338,15 @@ object CocoonArtworkStore {
         val mode = Prefs.cocoonImageMode(context)
         synchronized(lock) {
             if (NovaAppKinds.isCocoon(context, packageName)) {
+                // Cocoon may remain foreground for a few frames after sending
+                // the ROM to the invisible relay activity; don't erase the
+                // correctly identified game during this handoff.
+                if (assignedPackage != null &&
+                    SystemClock.elapsedRealtime() - relayHandoffAt < 5000L) {
+                    status = "Cocoon handoff to emulator in progress"
+                    return
+                }
                 resetAssignmentLocked()
-                // Do not erase the latest focused game merely because the
-                // Cocoon window itself changes during launch animation.
                 status = "Cocoon HOME; awaiting emulator game launch"
                 return
             }
