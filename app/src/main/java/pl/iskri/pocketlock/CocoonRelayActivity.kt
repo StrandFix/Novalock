@@ -81,7 +81,12 @@ class CocoonRelayActivity : Activity() {
 
             // The URI is supplied by Cocoon as {file.uri}, so it remains
             // available even if the emulator exposes only its app label.
-            val romName = safeRomName(rom)
+            val fromPath = source.getStringExtra("nl_path")?.let { path ->
+                val leaf = Uri.decode(path).substringAfterLast('/')
+                    .substringAfterLast(':').substringBeforeLast('.')
+                leaf.takeIf { it.length >= 3 }
+            }
+            val romName = fromPath ?: safeRomName(rom)
             CocoonArtworkStore.observeRomHandoff(
                 this, route.targetPackage, routeName, romName)
 
