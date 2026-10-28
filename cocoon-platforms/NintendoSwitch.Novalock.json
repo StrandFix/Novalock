@@ -193,7 +193,7 @@
     },
     {
       "name": "Eden via Novalock",
-      "uniqueId": "switch.novalock.eden",
+      "uniqueId": "switch.pl.iskri.pocketlock.nova",
       "description": "Optional Novalock ROM-art handoff; original emulator choices remain available. Choose this player once per platform.",
       "acceptedFilenameRegex": "^(.*)\\.(?:nro|nso|nca|xci|nsp)$",
       "amStartArguments": "-n pl.iskri.pocketlock.nova/pl.iskri.pocketlock.CocoonRelayActivity\n -a android.intent.action.VIEW\n -d {file.uri}\n --es nl_target eden\n --es nl_path {file.path}\n --grant-read-uri-permission",
