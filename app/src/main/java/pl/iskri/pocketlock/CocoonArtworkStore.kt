@@ -288,7 +288,11 @@ object CocoonArtworkStore {
         synchronized(lock) {
             focusEvents++
             focusCoordinates = "$type: ${bounds?.flattenToString() ?: "(none)"}; $note"
-            if (bounds == null) {
+            // A generic Play-button click can follow a valid game-card
+            // selection. Only a change of actual focused item invalidates
+            // the pending game; do not clear it for a tiny Play button.
+            if (bounds == null && (type.contains("FOCUSED") ||
+                    type.contains("SELECTED"))) {
                 pendingCocoonGame = null
                 pendingCocoonAt = 0L
             }
@@ -299,17 +303,44 @@ object CocoonArtworkStore {
      * Strong, unique pixel match from the actual focused Cocoon card only.
      * This does NOT choose artwork from unrelated HOME tiles.
      */
-    fun observeFocusedGameImage(context: Context, key: String, score: Int, next: Int) {
+    fun observeFocusedGameImage(
+        context: Context, key: String, score: Int, next: Int, capturedAt: Long
+    ) {
         if (GamePreviewStore.isLocked || Prefs.cocoonImageMode(context) == Prefs.COCOON_MODE_LIVE)
             return
+        var load: Triple<String, String, Long>? = null
+        val mode = Prefs.cocoonImageMode(context)
         synchronized(lock) {
             if (index[key] == null || isPlatformKey(key)) return
+            val now = SystemClock.elapsedRealtime()
+            if (now - capturedAt !in 0L..4000L) return
             pendingCocoonGame = key
-            pendingCocoonAt = SystemClock.elapsedRealtime()
+            pendingCocoonAt = capturedAt
             lastCocoonSelectionEvent = "FOCUSED_CARD_IMAGE"
             lastCocoonSelectionMatch = "Game card matched: $key (score $score, runner $next)"
             lastDecision = lastCocoonSelectionMatch
             status = "Cocoon focused card recognized: $key"
+            // Matcher may finish just AFTER a fast game launch. The source
+            // screenshot is verified Cocoon; allow this short-late result to
+            // bind only to an actual emulator, never a browser or HOME.
+            val pkg = GamePreviewStore.currentPackage
+            if (pkg != null && NovaAppKinds.isLikelyEmulator(context, pkg) &&
+                now - capturedAt < 4000L) {
+                val art = index[key]?.let { it[mode] ?: it["any"] }
+                if (art != null) {
+                    resetAssignmentLocked()
+                    assignedPackage = pkg
+                    assignedTitle = key
+                    load = Triple(key, pkg, generation)
+                    pendingCocoonGame = null
+                    pendingCocoonAt = 0L
+                    lastDecision = "Focused Cocoon artwork bound after emulator launch: $key"
+                    status = "Loading selected game artwork: $key"
+                }
+            }
+        }
+        load?.let { (title, pkg, token) ->
+            loadFor(context.applicationContext, title, pkg, mode, token)
         }
     }
 
