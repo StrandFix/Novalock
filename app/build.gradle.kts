@@ -37,8 +37,10 @@ android {
 
     buildTypes {
         debug {
-            // Allow installing beside the original Pocket Lock.
-            applicationIdSuffix = ".nova"
+            // V6.11 test installs beside V6.10: CI debug signatures are not
+            // stable between fresh GitHub runners. Never require uninstalling
+            // the user's working V6.10 app to test launch detection.
+            applicationIdSuffix = ".nova11"
             versionNameSuffix = "-v6.11"
         }
         release {
