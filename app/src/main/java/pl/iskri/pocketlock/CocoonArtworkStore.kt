@@ -22,6 +22,9 @@ object CocoonArtworkStore {
     private data class Artwork(val imageUri: Uri, val kind: String)
     private val lock = Any()
     private var index: Map<String, Map<String, Artwork>> = emptyMap()
+    // Retain all locally discovered image locations for a sleep-interrupted
+    // fingerprint build. No pixels or source files are persisted.
+    private var visualReferences: List<CocoonVisualMatcher.ArtworkReference> = emptyList()
     private var selectedTitle: String? = null
     private var selectedAt: Long = 0L
     private var assignedPackage: String? = null
@@ -242,13 +245,7 @@ object CocoonArtworkStore {
         val pm = context.getSystemService(Context.POWER_SERVICE) as PowerManager
         if (!pm.isInteractive || GamePreviewStore.isLocked) return
         if (CocoonVisualMatcher.needsBuild()) {
-            val currentImages = synchronized(lock) {
-                index.flatMap { (key, variants) ->
-                    variants.values.map { art ->
-                        CocoonVisualMatcher.ArtworkReference(key, art.kind, art.imageUri)
-                    }
-                }
-            }
+            val currentImages = synchronized(lock) { visualReferences }
             if (currentImages.isNotEmpty()) {
                 CocoonVisualMatcher.rebuild(context, currentImages)
                 return
@@ -340,6 +337,7 @@ object CocoonArtworkStore {
                 walk(root, 0, emptyList())
                 synchronized(lock) {
                     index = mutable.mapValues { it.value.toMap() }
+                    visualReferences = allVisualArt.toList()
                     selectedTitle = null
                     assignedPackage = null
                     assignedTitle = null
