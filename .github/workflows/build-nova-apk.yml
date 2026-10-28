@@ -1,6 +1,8 @@
 name: Build NovaLock APK
 on:
   workflow_dispatch:
+  push:
+    branches: [nova-preview]
 jobs:
   build:
     runs-on: ubuntu-22.04
@@ -24,7 +26,7 @@ jobs:
       - name: Build test APK
         run: |
           chmod +x gradlew
-          ./gradlew --no-daemon assembleDebug
+          ./gradlew --no-daemon testDebugUnitTest assembleDebug
       - uses: actions/upload-artifact@v4
         with:
           name: NovaLock-Test-APK
