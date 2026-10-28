@@ -278,7 +278,7 @@ object CocoonArtworkStore {
                                 val basename = name.substringBeforeLast('.')
                                 val source = (parent + " " + basename).lowercase()
                                 val kind = when {
-                                    Regex("(^|[^a-z])heroes?([^a-z]|$)").containsMatchIn(source) -> "hero"
+                                    Regex("(^|[^a-z])hero(?:es)?([^a-z]|$)").containsMatchIn(source) -> "hero"
                                     Regex("(^|[^a-z])logos?([^a-z]|$)").containsMatchIn(source) -> "logo"
                                     Regex("(^|[^a-z])(icons?|covers?|grids?)([^a-z]|$)").containsMatchIn(source) -> "icon"
                                     else -> "any"
