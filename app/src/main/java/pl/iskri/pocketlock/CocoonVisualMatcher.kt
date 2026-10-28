@@ -142,6 +142,7 @@ object CocoonVisualMatcher {
                 }
                 val winners = HashMap<String, Int>()
                 for (item in signaturesCopy) {
+                    if (CocoonArtworkStore.isPlatformOnlyKey(item.gameKey)) continue
                     val distance = screen.minOf { hashes ->
                         minOf(
                             java.lang.Long.bitCount(hashes.first xor item.landscape),
