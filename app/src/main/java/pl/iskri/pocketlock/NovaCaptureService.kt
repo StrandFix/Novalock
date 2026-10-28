@@ -282,6 +282,9 @@ class NovaCaptureService : AccessibilityService() {
             this, pkg, event.text.map { it.toString() })
         val previous = GamePreviewStore.currentPackage
         GamePreviewStore.observeForeground(this, pkg)
+        // The first Cocoon event is received before currentPackage is updated.
+        // Ensure a frame is scheduled after Cocoon becomes the foreground app.
+        if (NovaAppKinds.isCocoon(this, pkg)) scheduleCocoonFrame(210L)
         if (NovaAppKinds.isCocoon(this, pkg) ||
             NovaAppKinds.isSettings(this, pkg)) {
             // Neither Home nor Settings needs a screenshot or a pending timer.
