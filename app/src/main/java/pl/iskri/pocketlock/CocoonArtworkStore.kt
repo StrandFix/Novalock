@@ -94,11 +94,14 @@ object CocoonArtworkStore {
     }
 
     /** Only match complete known game titles, never a fragment of UI text. */
-    fun observeVisibleTitle(context: Context, visibleText: List<String>) {
+    fun observeVisibleTitle(
+        context: Context, visibleText: List<String>, frameTakenAt: Long
+    ) {
         if (Prefs.cocoonImageMode(context) == Prefs.COCOON_MODE_LIVE) return
         val observed = visibleText.map(::normalizeTitle)
             .filter { it.length >= 5 }
             .distinct()
+        var startLoading: Pair<String, String>? = null
         synchronized(lock) {
             lastOcrLabels = observed.take(8).joinToString(" | ").take(300)
                 .ifEmpty { "(no readable text)" }
@@ -137,6 +140,22 @@ object CocoonArtworkStore {
             lastStrongOcrAt = selectedAt
             lastOcrMatch = "Recognized game title: $matched"
             lastDecision = "Offline OCR matched Cocoon game: $matched"
+            val current = GamePreviewStore.currentPackage
+            if (current != null && !NovaAppKinds.isCocoon(context, current) &&
+                !NovaAppKinds.isSettings(context, current) &&
+                SystemClock.elapsedRealtime() - frameTakenAt < 6000L &&
+                !GamePreviewStore.isLocked) {
+                assignedPackage = current
+                assignedTitle = matched
+                selectedTitle = null
+                selectedAt = 0L
+                clearCached()
+                startLoading = matched to current
+                lastDecision = "OCR title bound to newly opened emulator: $matched"
+            }
+        }
+        startLoading?.let { (title, pkg) ->
+            loadFor(context.applicationContext, title, pkg)
         }
     }
 
