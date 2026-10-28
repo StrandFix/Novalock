@@ -49,8 +49,10 @@ class NovaCaptureService : AccessibilityService() {
     private val sampler = Runnable { captureIfReady() }
     private var cocoonCaptureBusy = false
     private var cocoonSampleScheduled = false
+    private var cocoonNextDueAt = Long.MAX_VALUE
     private val cocoonSampler = Runnable {
         cocoonSampleScheduled = false
+        cocoonNextDueAt = Long.MAX_VALUE
         captureCocoonArtworkFrame()
     }
 
@@ -63,8 +65,12 @@ class NovaCaptureService : AccessibilityService() {
     }
 
     private fun scheduleCocoonFrame(delayMs: Long) {
-        if (!cocoonReady() || cocoonSampleScheduled) return
+        if (!cocoonReady()) return
+        val dueAt = android.os.SystemClock.uptimeMillis() + delayMs
+        if (cocoonSampleScheduled && dueAt >= cocoonNextDueAt) return
+        handler.removeCallbacks(cocoonSampler)
         cocoonSampleScheduled = true
+        cocoonNextDueAt = dueAt
         handler.postDelayed(cocoonSampler, delayMs)
     }
 
@@ -231,6 +237,7 @@ class NovaCaptureService : AccessibilityService() {
                         handler.removeCallbacks(sampler)
                         handler.removeCallbacks(cocoonSampler)
                         cocoonSampleScheduled = false
+                        cocoonNextDueAt = Long.MAX_VALUE
                     }
                     Intent.ACTION_SCREEN_ON -> if (!GamePreviewStore.isLocked) {
                         scheduleCapture(APP_SWITCH_DELAY_MS)
@@ -256,7 +263,11 @@ class NovaCaptureService : AccessibilityService() {
         if (!NovaAppKinds.isSafeApp(pkg)) return
         if (NovaAppKinds.isCocoon(this, pkg)) {
             CocoonArtworkStore.ensureIndexed(this)
-            scheduleCocoonFrame(230L)
+            val quick = event.eventType == AccessibilityEvent.TYPE_VIEW_CLICKED ||
+                event.eventType == AccessibilityEvent.TYPE_VIEW_SELECTED ||
+                event.eventType == AccessibilityEvent.TYPE_VIEW_FOCUSED ||
+                event.eventType == AccessibilityEvent.TYPE_VIEW_ACCESSIBILITY_FOCUSED
+            scheduleCocoonFrame(if (quick) 175L else 450L)
         }
         if (NovaAppKinds.isCocoon(this, pkg) &&
             (event.eventType == AccessibilityEvent.TYPE_VIEW_CLICKED ||
