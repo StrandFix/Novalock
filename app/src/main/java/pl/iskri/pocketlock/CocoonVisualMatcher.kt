@@ -38,8 +38,10 @@ object CocoonVisualMatcher {
         private set
 
     private const val MAX_VISUAL_ARTWORK = 3500
-    private const val MAX_STRICT_DISTANCE = 15
-    private const val MIN_WINNER_MARGIN = 6
+    // The previous threshold of 15 allowed unrelated HOME tiles to score
+    // 12 and 14 and look deceptively like a game identity.
+    private const val MAX_STRICT_DISTANCE = 6
+    private const val MIN_WINNER_MARGIN = 10
     @Volatile private var lastCandidateReport = "No candidate tested"
     fun lastCandidates(): String = lastCandidateReport
 
@@ -166,7 +168,7 @@ object CocoonVisualMatcher {
                     report = "Unique game match: ${first.key} score=${first.value}, next=$second"
                     onIdentified(first.key, first.value, second)
                 } else {
-                    report = "Ambiguous visual match: $lastCandidateReport"
+                    report = "Unverified HOME image (not assigned): $lastCandidateReport"
                 }
             } catch (e: Exception) {
                 report = "Visual comparison failed: ${e.javaClass.simpleName}"
