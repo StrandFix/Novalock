@@ -64,3 +64,11 @@ This APK is a test build; battery usage and emulator behavior require validation
 - Image is decoded in the background ONLY when display is interactive. Temporary bitmaps are in memory; no requests to SteamGridDB, no external networking and no sending personal data.
 - All previous controls, existing play preview, Cocoon HOME, Settings activity-only fix, emulator badge, live screenshot refresh speeds, floating animation, top bar and three-press unlock are retained.
 - Device validation required: Android SAF folder picker and matched game artwork tested with actual Cocoon folder layout. Confirm consistent fallback on unmatched games.
+
+## V6.4 — Automatic Cocoon artwork from visual launch recognition (experimental)
+- Tested evidence: Cocoon's publicly shipped 3.1 APK exposes no unlocked, third-party-readable game session/content provider in its manifest. Existing platform GitHub repo does not publish full Android app source.
+- Cocoon 3.1 shows the launching game's own artwork fullscreen during its launch animation. Visual fingerprint matching uses only user-approved media folder plus screenshot from the existing accessibility service, with no game-by-game manual action, RetroAchievements login, root, or internet.
+- Index 3500 images via SAF as compact 64-bit perceptual hashes while awake, including numeric filename IDs; compare small Cocoon frame crops with the art index on background threads. Match requires uniquely confident 15/64 distance and >=6 gap, otherwise ordinary live screenshot is preserved.
+- Cocoon-only frame sampling (~2.3 s, scoped while foreground, opted in) stops on screen-off, locking, or Cocoon exit. Existing game screenshots 6/11/25 seconds, HOME, Settings security, battery and 3-button unlock untouched.
+- Screenshot remains default. User must select Cocoon hero/icon/logo to enable feature; no per-game controls. Existing diagnostic copy button includes last visual match confidence.
+- CRITICAL: Android build verifies syntax, not runtime recognition. Must verify physical Retro Pocket Nova capture timing and actual Cocoon folder names/images, and adjust matching if needed. Never claim guaranteed auto identification until this succeeds.
