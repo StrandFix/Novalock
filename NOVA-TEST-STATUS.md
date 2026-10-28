@@ -81,3 +81,12 @@ This APK is a test build; battery usage and emulator behavior require validation
 - Conservative 15-bit threshold and 6-bit best-vs-distinct-game margin unchanged. If two DIFFERENT games still tie, retain live screenshot; do not show a guessed image.
 - No extra privileges, online accounts, manual per-game selections or screenshot polling while screen-off. V6.4 HOME, Settings, game captures, charging and three-press unlock remain untouched.
 - Must verify on physical Retroid Pocket Nova: refresh artwork index (required to migrate file keys), start game from Cocoon, and share new diagnostic if fallback persists.
+
+## V6.6 — Cocoon OCR + strict visual match (experimental)
+- Actual V6.5 device diagnostic: canonical game keys 261, OCR/accessibility labels unavailable in old build, emulator Eden, visual matches Lost Vikings score 12 and MegaCD score 14. Both are unsuitable and must remain rejected.
+- Root cause: global Cocoon grid contains multiple artwork tiles and platform symbols; perceptual dHash against whole viewport cannot reliably establish the *launched* game.
+- Bundle ML Kit Latin text recognition model in APK for **offline, screen-on-only** recognition of Cocoon's visible title/logo text. Recognized lines are compared against existing canonical artwork title keys with exact-or-uniquely-region-stripped matching, never fuzzy guesses. Multiple matched titles are considered ambiguous.
+- OCR asynchronously processes original Cocoon foreground screenshot at up to 960px, while independent 480px thumbnail continues strict visual matching. OCR can finish just after emulator launch: results are accepted only if <=6 seconds old, screen awake, not locked.
+- A strong exact OCR match takes precedence over non-title background artwork hashes. Image-only candidates now require at most 6/64 dHash bits and at least a 10-bit margin over the next *different game*; unrelated 12/14 results are rejected.
+- No per-game manual selection, no RetroAchievements login, no cloud image recognition, no scanning during sleep. Screenshot fallback remains default and unchanged.
+- Device proof required: test the actually selected game in Cocoon, start Eden or another emulator, inspect diagnostic sections "Cocoon OCR", "Visible Cocoon text", "OCR title match", "Match decision", and "Visual matcher". Build-only success does NOT establish automatic game identification.
