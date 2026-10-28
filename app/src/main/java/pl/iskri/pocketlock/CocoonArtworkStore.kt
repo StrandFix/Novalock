@@ -40,6 +40,9 @@ object CocoonArtworkStore {
     private var lastForeground = "None"
     private var indexedExamples = "No index yet"
     private var lastDecision = "Waiting for game identity from Cocoon or emulator"
+    private var lastOcrLabels = "No Cocoon screen text scanned"
+    private var lastOcrMatch = "No Cocoon game title recognized"
+    private var lastStrongOcrAt = 0L
     @Volatile var status: String = "No Cocoon artwork folder selected"
         private set
 
@@ -90,6 +93,53 @@ object CocoonArtworkStore {
         } ?: fromFile
     }
 
+    /** Only match complete known game titles, never a fragment of UI text. */
+    fun observeVisibleTitle(context: Context, visibleText: List<String>) {
+        if (Prefs.cocoonImageMode(context) == Prefs.COCOON_MODE_LIVE) return
+        val observed = visibleText.map(::normalizeTitle)
+            .filter { it.length >= 5 }
+            .distinct()
+        synchronized(lock) {
+            lastOcrLabels = observed.take(8).joinToString(" | ").take(300)
+                .ifEmpty { "(no readable text)" }
+            if (index.isEmpty()) {
+                lastOcrMatch = "Image index not ready"
+                return
+            }
+            val region = Regex(" (?:the )?(?:usa|europe|japan|world|asia|australia|uk|pal|ntsc|rev [0-9]+|v[0-9]+(?: [0-9]+)*)$")
+            fun stem(key: String): String {
+                var value = key
+                repeat(3) { value = value.replace(region, "") }
+                return value.trim()
+            }
+            // Prefer exact library title; only strip recognizable region/revision
+            // suffixes when that produces ONE unambiguous game.
+            val exact = observed.flatMap { label ->
+                index.keys.filter { it == label }
+            }.distinct()
+            val matched = when {
+                exact.size == 1 -> exact.single()
+                exact.size > 1 -> null
+                else -> {
+                    val equivalent = observed.flatMap { label ->
+                        index.keys.filter { key -> stem(key) == label }
+                    }.distinct()
+                    equivalent.singleOrNull()
+                }
+            }
+            if (matched == null) {
+                lastOcrMatch = if (exact.size > 1) "Ambiguous exact title"
+                    else "No unique exact title among ${observed.size} text lines"
+                return
+            }
+            selectedTitle = matched
+            selectedAt = SystemClock.elapsedRealtime()
+            lastStrongOcrAt = selectedAt
+            lastOcrMatch = "Recognized game title: $matched"
+            lastDecision = "Offline OCR matched Cocoon game: $matched"
+        }
+    }
+
     /** Called only for Cocoon-provided Accessibility click/focus labels. */
     fun observeCocoonSelection(context: Context, texts: List<String>) {
         if (Prefs.cocoonImageMode(context) == Prefs.COCOON_MODE_LIVE) return
@@ -118,6 +168,10 @@ object CocoonArtworkStore {
                 lastForeground = packageName
                 assignedPackage = null
                 assignedTitle = null
+                // A prior game must not carry over after visiting Cocoon.
+                selectedTitle = null
+                selectedAt = 0L
+                lastStrongOcrAt = 0L
                 clearCached()
             }
             return
@@ -187,6 +241,10 @@ object CocoonArtworkStore {
         var shouldLoad: Pair<String, String>? = null
         synchronized(lock) {
             if (!index.containsKey(key)) return
+            // OCR of an exact visible title has priority over background
+            // artwork that may belong to another tile in Cocoon's grid.
+            if (lastStrongOcrAt > 0L &&
+                SystemClock.elapsedRealtime() - lastStrongOcrAt < 45_000L) return
             selectedTitle = key
             selectedAt = SystemClock.elapsedRealtime()
             lastDecision = "Visual match for Cocoon artwork key: $key"
@@ -222,6 +280,9 @@ object CocoonArtworkStore {
             "Canonical game keys in index: ${index.size}",
             "Example indexed keys: $indexedExamples",
             "Last Cocoon labels: $lastCocoonLabels",
+            "Cocoon OCR: ${CocoonTitleRecognizer.report}",
+            "Visible Cocoon text: $lastOcrLabels",
+            "OCR title match: $lastOcrMatch",
             "Last emulator labels: $lastEmulatorLabels",
             "Last foreground package: $lastForeground",
             "Assigned title: ${assignedTitle ?: "(none)"}",
