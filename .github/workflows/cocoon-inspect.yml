@@ -1,0 +1,74 @@
+name: Cocoon interoperability audit
+on:
+  push:
+    paths:
+      - .github/workflows/cocoon-inspect.yml
+  workflow_dispatch:
+jobs:
+  inspect:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 25
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Inspect officially published Cocoon APK
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p audit
+          curl --retry 4 -fL 'https://github.com/inssekt/CocoonFE/releases/download/beta-3.1/cocoon-31.apk' -o /tmp/cocoon.apk
+          sha256sum /tmp/cocoon.apk > audit/apk-hash.txt
+          file /tmp/cocoon.apk > audit/apk-type.txt
+          unzip -l /tmp/cocoon.apk > audit/entries.txt
+          python3 - <<'PY'
+          import zipfile,collections
+          with zipfile.ZipFile('/tmp/cocoon.apk') as z:
+              files=z.namelist()
+              with open('audit/structure.txt','w') as f:
+                  f.write('Entries: %d\n'%len(files))
+                  f.write('\n'.join(sorted([p for p in files if p.endswith('.dex') or p.endswith('.so') or 'database' in p.lower() or 'flutter' in p.lower() or 'assets/' in p.lower()])[:3500]))
+          PY
+          SDK_AAPT="$(find "$ANDROID_HOME/build-tools" -name aapt -type f | sort -r | head -n 1)"
+          "$SDK_AAPT" dump badging /tmp/cocoon.apk > audit/badging.txt || true
+          "$SDK_AAPT" dump xmltree /tmp/cocoon.apk AndroidManifest.xml > audit/manifest.txt || true
+          python3 - <<'PY'
+          import json,urllib.request
+          u='https://api.github.com/repos/skylot/jadx/releases/latest'
+          req=urllib.request.Request(u,headers={'User-Agent':'Cocoon-Interop-Audit'})
+          data=json.load(urllib.request.urlopen(req,timeout=30))
+          for asset in data.get('assets',[]):
+              name=asset['name']
+              if name.startswith('jadx-') and name.endswith('.zip') and 'gui' not in name:
+                  print(asset['browser_download_url'])
+                  open('/tmp/jadx-url','w').write(asset['browser_download_url'])
+                  break
+          PY
+          if test -s /tmp/jadx-url; then
+            curl --retry 3 -fL "$(cat /tmp/jadx-url)" -o /tmp/jadx.zip
+            unzip -q /tmp/jadx.zip -d /tmp/jadx
+            timeout 450 /tmp/jadx/bin/jadx --no-res --threads-count 4 -d /tmp/cocoon-java /tmp/cocoon.apk > audit/jadx-log.txt 2>&1 || true
+            mkdir -p audit/code_samples
+            if test -d /tmp/cocoon-java/sources; then
+              rg -il 'ContentProvider|android\.content\.Intent|Cocoon|gameSession|currentGame|nowPlaying|cocoon_db|openDatabase|ACTION_VIEW|startActivity' /tmp/cocoon-java/sources | head -n 100 > audit/related-code-files.txt || true
+              rg -n -i -m 3 'cocoon_db|sessionId|currentGame|activeGame|gameId|nowPlaying|intent\.data|startActivity\(' /tmp/cocoon-java/sources | head -n 240 > audit/code-matches.txt || true
+              while read -r p; do
+                test -f "$p" || continue
+                cp "$p" "audit/code_samples/$(basename "$p")" || true
+              done < <(head -n 12 audit/related-code-files.txt)
+            fi
+          fi
+          if unzip -l /tmp/cocoon.apk | grep -q 'libapp.so'; then
+            unzip -p /tmp/cocoon.apk 'lib/*/libapp.so' > /tmp/libapp-joined.so || true
+            strings -n 9 /tmp/libapp-joined.so | rg -i -m 250 'cocoon_db|game_session|active_game|lastplayed|played_game|nowplaying|content://|media_assets|hero|gamelist.xml|launch.*game|rom.*path' > audit/native-strings.txt || true
+          fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: cocoon-interoperability-report
+          path: audit/
+          retention-days: 2
