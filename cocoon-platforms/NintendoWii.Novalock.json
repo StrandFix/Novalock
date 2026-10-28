@@ -139,7 +139,7 @@
     },
     {
       "name": "Dolphin Wii via Novalock",
-      "uniqueId": "wii.novalock.dolphin_wii",
+      "uniqueId": "wii.pl.iskri.pocketlock.nova",
       "description": "Optional Novalock ROM-art handoff; original emulator choices remain available. Choose this player once per platform.",
       "acceptedFilenameRegex": "^(.*)\\.(?:ciso|dff|dol|elf|gcm|gcz|iso|tgc|wad|wbfs|rvz|m3u)$",
       "amStartArguments": "-n pl.iskri.pocketlock.nova/pl.iskri.pocketlock.CocoonRelayActivity\n -a android.intent.action.VIEW\n -d {file.uri}\n --es nl_target dolphin_wii\n --es nl_path {file.path}\n --grant-read-uri-permission",
