@@ -52,11 +52,14 @@ class NovaCaptureService : AccessibilityService() {
     private val sampler = Runnable { captureIfReady() }
     private var focusedCaptureBusy = false
     private var cardEpoch = 0L
+    private var cardFocusId = 0L
     private var focusedCardTask: Runnable? = null
     private var lastFocusedBounds = Rect()
     private var lastFocusedAt = 0L
 
     private fun captureFocusedCocoonCard(event: AccessibilityEvent) {
+        cardFocusId += 1L
+        val focusId = cardFocusId
         if (Prefs.cocoonImageMode(this) == Prefs.COCOON_MODE_LIVE ||
             !Prefs.isEnabled(this) || !CocoonArtworkStore.selectedFolder(this) ||
             GamePreviewStore.isLocked) return
@@ -165,6 +168,7 @@ class NovaCaptureService : AccessibilityService() {
                                         "Discarded frame: Cocoon no longer foreground")
                                     return
                                 }
+                                val capturedAt = android.os.SystemClock.elapsedRealtime()
                                 val hardware = Bitmap.wrapHardwareBuffer(
                                     buffer, result.colorSpace)
                                 val frame = hardware?.copy(Bitmap.Config.ARGB_8888, false)
@@ -172,10 +176,19 @@ class NovaCaptureService : AccessibilityService() {
                                 CocoonCardMatcher.matchFocusedCard(
                                     this@NovaCaptureService, frame, rectCopy,
                                     realSize.x, realSize.y) { match ->
-                                    if (cardEpoch == epoch && !GamePreviewStore.isLocked) {
+                                    val pkg = GamePreviewStore.currentPackage
+                                    val recentGameLaunch =
+                                        pkg != null &&
+                                        NovaAppKinds.isLikelyEmulator(
+                                            this@NovaCaptureService, pkg) &&
+                                        android.os.SystemClock.elapsedRealtime() -
+                                            capturedAt < 4000L
+                                    if (cardFocusId == focusId &&
+                                        (cardEpoch == epoch || recentGameLaunch) &&
+                                        !GamePreviewStore.isLocked) {
                                         CocoonArtworkStore.observeFocusedGameImage(
                                             this@NovaCaptureService, match.gameKey,
-                                            match.score, match.secondScore)
+                                            match.score, match.secondScore, capturedAt)
                                     }
                                 }
                             } catch (e: Exception) {
