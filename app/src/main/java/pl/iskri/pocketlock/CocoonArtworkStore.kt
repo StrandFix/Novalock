@@ -36,6 +36,8 @@ object CocoonArtworkStore {
     private var lastCocoonSelectionLabels = "(none)"
     private var lastCocoonSelectionMatch = "(none)"
     private var cocoonSelectionEventCount = 0
+    private var focusCoordinates = "(no Cocoon focused bounds captured)"
+    private var focusEvents = 0
     private var assignedPackage: String? = null
     private var assignedTitle: String? = null
     private var imagePackage: String? = null
@@ -63,6 +65,8 @@ object CocoonArtworkStore {
         "pc", "steam", "retroarch", "eden", "dolphin", "azahar",
         "emulators", "games", "systems", "favorites", "favourites"
     )
+    internal fun isPlatformKey(key: String): Boolean = key in platformKeys
+
     private val genericFolders = setOf(
         "cocoon", "edit", "images", "image", "artwork", "art", "media",
         "hero", "heroes", "icon", "icons", "logo", "logos", "cover",
@@ -276,6 +280,39 @@ object CocoonArtworkStore {
         }
     }
 
+    /**
+     * Feedback about accessibility bounds helps distinguish real selected
+     * game cards from fullscreen/opaque Cocoon Flutter containers.
+     */
+    fun noteFocusedBounds(type: String, bounds: android.graphics.Rect?, note: String) {
+        synchronized(lock) {
+            focusEvents++
+            focusCoordinates = "$type: ${bounds?.flattenToString() ?: "(none)"}; $note"
+            if (bounds == null) {
+                pendingCocoonGame = null
+                pendingCocoonAt = 0L
+            }
+        }
+    }
+
+    /**
+     * Strong, unique pixel match from the actual focused Cocoon card only.
+     * This does NOT choose artwork from unrelated HOME tiles.
+     */
+    fun observeFocusedGameImage(context: Context, key: String, score: Int, next: Int) {
+        if (GamePreviewStore.isLocked || Prefs.cocoonImageMode(context) == Prefs.COCOON_MODE_LIVE)
+            return
+        synchronized(lock) {
+            if (index[key] == null || isPlatformKey(key)) return
+            pendingCocoonGame = key
+            pendingCocoonAt = SystemClock.elapsedRealtime()
+            lastCocoonSelectionEvent = "FOCUSED_CARD_IMAGE"
+            lastCocoonSelectionMatch = "Game card matched: $key (score $score, runner $next)"
+            lastDecision = lastCocoonSelectionMatch
+            status = "Cocoon focused card recognized: $key"
+        }
+    }
+
     fun observeForeground(context: Context, packageName: String) {
         if (Prefs.cocoonImageMode(context) == Prefs.COCOON_MODE_LIVE) return
         var loading: Triple<String, String, Long>? = null
@@ -413,6 +450,7 @@ object CocoonArtworkStore {
             !selectedFolder(context)) return
         val power = context.getSystemService(Context.POWER_SERVICE) as PowerManager
         if (!power.isInteractive || GamePreviewStore.isLocked) return
+        CocoonCardMatcher.ensureBuilt(context)
         val needed = synchronized(lock) {
             !scanAttempted && !scanning && index.isEmpty()
         }
@@ -438,6 +476,7 @@ object CocoonArtworkStore {
         val app = context.applicationContext
         Thread({
             val images = mutableMapOf<String, MutableMap<String, Artwork>>()
+            val visualRefs = ArrayList<CocoonCardMatcher.ArtworkRef>()
             var fileCount = 0
             var failure: String? = null
             try {
@@ -478,6 +517,9 @@ object CocoonArtworkStore {
                             val key = canonicalFileKey(stem, parents)
                             if (key.length < 3 || key in platformKeys) continue
                             val imageUri = DocumentsContract.buildDocumentUriUsingTree(tree, id)
+                            // The image matcher needs every unique icon/hero
+                            // variant, but only one visual identity per game.
+                            visualRefs.add(CocoonCardMatcher.ArtworkRef(key, category, imageUri))
                             val variants = images.getOrPut(key) { mutableMapOf() }
                             // Stable first available variant for each kind.
                             variants.putIfAbsent(category, Artwork(imageUri, category))
@@ -485,6 +527,7 @@ object CocoonArtworkStore {
                     }
                 }
                 walk(root, emptyList(), 0)
+                CocoonCardMatcher.rebuild(app, visualRefs)
                 synchronized(lock) {
                     index = images.mapValues { it.value.toMap() }
                     resetAssignmentLocked()
@@ -513,6 +556,10 @@ object CocoonArtworkStore {
             "Game keys in index: ${index.size}",
             "Example indexed keys: $indexedExamples",
             "Cocoon selection events: $cocoonSelectionEventCount",
+            "Focused-node event count: $focusEvents",
+            "Focused-node bounds: $focusCoordinates",
+            "Focused image index: ${CocoonCardMatcher.status}",
+            "Focused image match: ${CocoonCardMatcher.lastMatch}",
             "Last Cocoon selection event: $lastCocoonSelectionEvent",
             "Selected-node text: $lastCocoonSelectionLabels",
             "Selected-node result: $lastCocoonSelectionMatch",
@@ -525,7 +572,7 @@ object CocoonArtworkStore {
             "Loaded image: ${imageTitle ?: "(none)"}",
             "Decision: $lastDecision",
             "Status: $status",
-            "Source: emulator window title (no OCR or visual guesses)"
+            "Source: emulator title OR uniquely matched focused Cocoon card (no global HOME guessing)"
         ).joinToString("\n")
     }
 }
