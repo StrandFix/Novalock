@@ -256,8 +256,14 @@ object CocoonArtworkStore {
                 }
                 // Clear previously selected title on a *new* focused/clicked
                 // item that does not match; never reuse a stale game.
-                pendingCocoonGame = null
-                pendingCocoonAt = 0L
+                // A generic "Play" click follows selection on some
+                // launchers. Keep a recent focused title across that click,
+                // but clear when focus has moved to an unrecognized item.
+                if (eventType.contains("FOCUSED") ||
+                    eventType.contains("SELECTED")) {
+                    pendingCocoonGame = null
+                    pendingCocoonAt = 0L
+                }
                 return
             }
             val best = matches.first()
@@ -296,7 +302,8 @@ object CocoonArtworkStore {
             val selected = pendingCocoonGame
             val fresh = pendingCocoonAt != 0L &&
                 SystemClock.elapsedRealtime() - pendingCocoonAt in 0..COCOON_SELECTION_MAX_AGE_MS
-            if (selected != null && fresh && !GamePreviewStore.isLocked) {
+            if (selected != null && fresh && !GamePreviewStore.isLocked &&
+                NovaAppKinds.isLikelyEmulator(context, packageName)) {
                 val art = index[selected]?.let { it[mode] ?: it["any"] }
                 if (art != null) {
                     resetAssignmentLocked()
@@ -309,6 +316,10 @@ object CocoonArtworkStore {
                 } else {
                     lastDecision = "Cocoon selected '$selected' but chosen $mode image unavailable"
                 }
+            }
+            if (selected != null && fresh &&
+                !NovaAppKinds.isLikelyEmulator(context, packageName)) {
+                lastDecision = "Cocoon selection not assigned: next app is not an emulator"
             }
             pendingCocoonGame = null
             pendingCocoonAt = 0L
