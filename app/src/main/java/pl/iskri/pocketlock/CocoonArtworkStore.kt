@@ -139,6 +139,34 @@ object CocoonArtworkStore {
         if (shouldLoad) loadFor(context.applicationContext, matched, packageName)
     }
 
+    /**
+     * Identified by comparing a pre-launch Cocoon frame against downloaded
+     * artwork. Requires a unique, high-confidence visual fingerprint.
+     */
+    fun observeVisualMatch(context: Context, key: String) {
+        if (Prefs.cocoonImageMode(context) == Prefs.COCOON_MODE_LIVE ||
+            GamePreviewStore.isLocked) return
+        var shouldLoad: Pair<String, String>? = null
+        synchronized(lock) {
+            if (!index.containsKey(key)) return
+            selectedTitle = key
+            selectedAt = SystemClock.elapsedRealtime()
+            lastDecision = "Visual match for Cocoon artwork key: $key"
+            status = "Game image recognized automatically"
+            val pkg = GamePreviewStore.currentPackage
+            if (pkg != null && !NovaAppKinds.isCocoon(context, pkg) &&
+                !NovaAppKinds.isSettings(context, pkg)) {
+                assignedPackage = pkg
+                assignedTitle = key
+                clearCached()
+                shouldLoad = key to pkg
+            }
+        }
+        shouldLoad?.let { (title, pkg) ->
+            loadFor(context.applicationContext, title, pkg)
+        }
+    }
+
     fun activeArtFor(context: Context, packageName: String?): Bitmap? {
         if (Prefs.cocoonImageMode(context) == Prefs.COCOON_MODE_LIVE) return null
         synchronized(lock) {
@@ -160,6 +188,7 @@ object CocoonArtworkStore {
             "Last foreground package: $lastForeground",
             "Assigned title: ${assignedTitle ?: "(none)"}",
             "Match decision: $lastDecision",
+            "Visual matcher: ${CocoonVisualMatcher.report}",
             "Last status: $status"
         ).joinToString("\n")
     }
@@ -246,7 +275,9 @@ object CocoonArtworkStore {
                                 val key = normalizeTitle(
                                     if (stripped.equals(kind, ignoreCase = true) ||
                                         stripped.length < 3) parent else stripped)
-                                if (key.length < 3 || key.matches(Regex("[0-9 ]+"))) continue
+                                // Numeric IDs are common in scraped media. They
+                                // cannot match a text title but can match pixels.
+                                if (key.length < 3) continue
                                 val uri = DocumentsContract.buildDocumentUriUsingTree(tree, id)
                                 val entry = mutable.getOrPut(key) { mutableMapOf() }
                                 // First matching image is retained to avoid rotating randomly.
@@ -264,7 +295,13 @@ object CocoonArtworkStore {
                     clearCached()
                     indexedExamples = index.keys.sorted().take(12).joinToString(" | ").take(380)
                 }
-                message = "Indexed ${index.size} artwork keys from $count image files (not confirmed games)"
+                val visualReferences = mutable.flatMap { (key, variants) ->
+                    variants.values.map { art ->
+                        CocoonVisualMatcher.ArtworkReference(key, art.kind, art.imageUri)
+                    }
+                }
+                CocoonVisualMatcher.rebuild(app, visualReferences)
+                message = "Indexed ${index.size} artwork keys from $count image files; building visual matches"
             } catch (e: Exception) {
                 message = "Cannot read folder: ${e.javaClass.simpleName}. Select the Cocoon data folder."
             } finally {
