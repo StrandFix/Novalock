@@ -206,6 +206,19 @@ object CocoonArtworkStore {
         if (!selectedFolder(context)) return
         val pm = context.getSystemService(Context.POWER_SERVICE) as PowerManager
         if (!pm.isInteractive || GamePreviewStore.isLocked) return
+        if (CocoonVisualMatcher.needsBuild()) {
+            val currentImages = synchronized(lock) {
+                index.flatMap { (key, variants) ->
+                    variants.values.map { art ->
+                        CocoonVisualMatcher.ArtworkReference(key, art.kind, art.imageUri)
+                    }
+                }
+            }
+            if (currentImages.isNotEmpty()) {
+                CocoonVisualMatcher.rebuild(context, currentImages)
+                return
+            }
+        }
         val required = synchronized(lock) {
             if (attemptedIndex || indexing || index.isNotEmpty()) false
             else {
