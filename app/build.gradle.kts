@@ -20,7 +20,7 @@ android {
         applicationId = "pl.iskri.pocketlock"
         minSdk = 27
         targetSdk = 34
-        versionCode = 94
+        versionCode = 95
         versionName = "1.4-novalock"
     }
 
@@ -39,7 +39,7 @@ android {
         debug {
             // Allow installing beside the original Pocket Lock.
             applicationIdSuffix = ".nova"
-            versionNameSuffix = "-v6.8"
+            versionNameSuffix = "-v6.9"
         }
         release {
             isMinifyEnabled = false
