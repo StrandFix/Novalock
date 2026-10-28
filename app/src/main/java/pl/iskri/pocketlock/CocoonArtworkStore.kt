@@ -50,6 +50,8 @@ object CocoonArtworkStore {
     private var lastAvailableImages = "(not checked)"
     private var lastDecision = "Waiting for emulator game title"
     private var indexedExamples = "(not indexed)"
+    private var lastRelay = "No Cocoon ROM intent received"
+    private var lastRelayMatch = "(none)"
     @Volatile var status: String = "Select the Cocoon artwork folder"
         private set
 
@@ -273,6 +275,51 @@ object CocoonArtworkStore {
             lastCocoonSelectionMatch = "Selected game: ${best.gameKey}"
             lastDecision = "Cocoon selected game before emulator launch: ${best.gameKey}"
             status = lastDecision
+        }
+    }
+
+    /**
+     * Trusted input for the bridge: the actual ROM filename that Cocoon put
+     * into the custom player's launch intent. This does not need emulator
+     * title labels, screen content, or screenshot comparisons.
+     */
+    fun observeRomHandoff(
+        context: Context, targetPackage: String, routeName: String, romName: String
+    ) {
+        val mode = Prefs.cocoonImageMode(context)
+        var loading: Triple<String, String, Long>? = null
+        synchronized(lock) {
+            lastRelay = "Cocoon -> $routeName -> $targetPackage : ${normalizeTitle(romName).take(150)}"
+            if (mode == Prefs.COCOON_MODE_LIVE || GamePreviewStore.isLocked) {
+                lastRelayMatch = "Live screenshot mode, relay forwarded ROM unchanged"
+                return
+            }
+            val choice = resolveTitleLocked(romName, mode)
+            if (choice == null) {
+                lastRelayMatch = "No matching local game art for ROM '$romName'"
+                lastDecision = lastRelayMatch
+                status = lastDecision
+                return
+            }
+            lastRelayMatch = "ROM matched to ${choice.gameKey} (${choice.note})"
+            lastMatchingKeys = choice.gameKey
+            lastAvailableImages = choice.available.keys.joinToString(", ")
+            if (choice.available[mode] == null && choice.available["any"] == null) {
+                lastDecision = "Matched ROM name but requested $mode image absent"
+                status = lastDecision
+                return
+            }
+            resetAssignmentLocked()
+            assignedPackage = targetPackage
+            assignedTitle = choice.gameKey
+            pendingCocoonGame = null
+            pendingCocoonAt = 0L
+            lastDecision = "Cocoon ROM launch identified exactly: ${choice.gameKey}"
+            status = "Loading $mode artwork from Cocoon..."
+            loading = Triple(choice.gameKey, targetPackage, generation)
+        }
+        loading?.let { (key, pkg, token) ->
+            loadFor(context.applicationContext, key, pkg, mode, token)
         }
     }
 
@@ -519,6 +566,8 @@ object CocoonArtworkStore {
             "Selected-node text: $lastCocoonSelectionLabels",
             "Selected-node result: $lastCocoonSelectionMatch",
             "Pending Cocoon game: ${pendingCocoonGame ?: "(none)"}",
+            "Last Cocoon ROM relay: $lastRelay",
+            "ROM relay match: $lastRelayMatch",
             "Last emulator title: $lastEmulatorTitle",
             "Last emulator package: $lastEmulatorPackage",
             "Matching indexed keys: $lastMatchingKeys",
