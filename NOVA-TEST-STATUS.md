@@ -90,3 +90,13 @@ This APK is a test build; battery usage and emulator behavior require validation
 - A strong exact OCR match takes precedence over non-title background artwork hashes. Image-only candidates now require at most 6/64 dHash bits and at least a 10-bit margin over the next *different game*; unrelated 12/14 results are rejected.
 - No per-game manual selection, no RetroAchievements login, no cloud image recognition, no scanning during sleep. Screenshot fallback remains default and unchanged.
 - Device proof required: test the actually selected game in Cocoon, start Eden or another emulator, inspect diagnostic sections "Cocoon OCR", "Visible Cocoon text", "OCR title match", "Match decision", and "Visual matcher". Build-only success does NOT establish automatic game identification.
+
+## V6.8 — Focused Cocoon game card launch handoff, no visual guessing
+- User device diagnostic V6.7: Dolphin reports only generic "dolphin emulator", not game title; Cocoon HOME/Settings clears active art. Index has 235 keys but no title available from this window label.
+- On screen-on and enabled, accessibility service now observes **ONLY Cocoon's selected/clicked/focused game node** (TYPE_VIEW_FOCUSED/SELECTED/CLICKED/ACCESSIBILITY_FOCUSED); receives ability to inspect selected view content (canRetrieveWindowContent=true) after the user permits accessibility.
+- Sources: event.text, selected event.source subtree, optionally its parent/focused view, never an arbitrary full-screen grid or all app text. Multiple or unrecognized game labels are rejected.
+- Exact/region-aware local artwork title match is recorded for at most 20 seconds. Only the next recognized emulator package receives the artwork, automatically and only if the requested image type exists.
+- Preserve pending selection across a generic "Play" click; clear pending on focus changing to unknown item, Settings access or an unrelated app launch.
+- Device diagnostics now include selection event count, event type, selected-node text, title match, pending title and emulator-window title. These separate no-title-exposed from no-local-artwork cases.
+- No OCR model, no image similarity guesses, no background screen capture, no data upload, no per-game manual steps. Screenshot fallback remains unchanged. Three-press unlock, HOME, Settings, button layout, charging and battery logic untouched.
+- **Unverified Android-runtime dependency**: Cocoon must expose a game-title/content description on the focused card. Code compile and unit tests cannot prove that. On install, disable and re-enable the Accessibility service if Android does not grant the upgraded content-reading capability.
