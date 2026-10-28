@@ -74,6 +74,26 @@ object CocoonArtworkStore {
         return key.trim()
     }
 
+    /**
+     * Cocoon's home library also contains platform icons (Mega CD, 3DO, etc).
+     * They are NOT game titles and must never become the lock artwork based
+     * on OCR or an unrelated screenshot hash.
+     */
+    private val platformOnlyKeys = setOf(
+        "3do", "amiga", "amstradcpc", "android", "megacd", "sega cd",
+        "segacd", "mega drive", "megadrive", "genesis", "arcade",
+        "atari", "atari2600", "atari5200", "atari7800", "atari lynx",
+        "game boy", "gameboy", "gb", "gbc", "gba", "nes", "snes",
+        "nintendo", "nintendo 64", "nintendo64", "n64", "nds", "3ds",
+        "nintendo switch", "switch", "gamecube", "wii", "wii u",
+        "playstation", "ps1", "psx", "ps2", "ps3", "psp", "psvita",
+        "saturn", "dreamcast", "windows", "pc", "steam", "retroarch",
+        "emulators", "games", "systems", "favorites", "favourites"
+    )
+
+    internal fun isPlatformOnlyKey(key: String): Boolean =
+        key in platformOnlyKeys
+
     private val genericFolderNames = setOf(
         "cocoon", "edit", "images", "image", "artwork", "art", "media",
         "hero", "heroes", "icon", "icons", "logo", "logos", "cover",
@@ -118,14 +138,16 @@ object CocoonArtworkStore {
             // Prefer exact library title; only strip recognizable region/revision
             // suffixes when that produces ONE unambiguous game.
             val exact = observed.flatMap { label ->
-                index.keys.filter { it == label }
+                index.keys.filter { it == label && !isPlatformOnlyKey(it) }
             }.distinct()
             val matched = when {
                 exact.size == 1 -> exact.single()
                 exact.size > 1 -> null
                 else -> {
                     val equivalent = observed.flatMap { label ->
-                        index.keys.filter { key -> stem(key) == label }
+                        index.keys.filter { key ->
+                            !isPlatformOnlyKey(key) && stem(key) == label
+                        }
                     }.distinct()
                     equivalent.singleOrNull()
                 }
@@ -259,7 +281,7 @@ object CocoonArtworkStore {
             GamePreviewStore.isLocked) return
         var shouldLoad: Pair<String, String>? = null
         synchronized(lock) {
-            if (!index.containsKey(key)) return
+            if (!index.containsKey(key) || isPlatformOnlyKey(key)) return
             // OCR of an exact visible title has priority over background
             // artwork that may belong to another tile in Cocoon's grid.
             if (lastStrongOcrAt > 0L &&
