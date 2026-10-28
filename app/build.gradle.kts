@@ -20,7 +20,7 @@ android {
         applicationId = "pl.iskri.pocketlock"
         minSdk = 27
         targetSdk = 34
-        versionCode = 91
+        versionCode = 92
         versionName = "1.4-novalock"
     }
 
@@ -39,7 +39,7 @@ android {
         debug {
             // Allow installing beside the original Pocket Lock.
             applicationIdSuffix = ".nova"
-            versionNameSuffix = "-v6.5"
+            versionNameSuffix = "-v6.6"
         }
         release {
             isMinifyEnabled = false
@@ -57,4 +57,9 @@ android {
     kotlinOptions {
         jvmTarget = "17"
     }
+}
+
+// Text recognition model is bundled inside the APK: offline inference on Cocoon only.
+dependencies {
+    implementation("com.google.mlkit:text-recognition:16.0.1")
 }
