@@ -222,7 +222,9 @@ class NovaCaptureService : AccessibilityService() {
                 event.eventType == AccessibilityEvent.TYPE_VIEW_SELECTED ||
                 event.eventType == AccessibilityEvent.TYPE_VIEW_CLICKED ||
                 event.eventType == AccessibilityEvent.TYPE_VIEW_ACCESSIBILITY_FOCUSED
-            if (selectedEvent && awakeAndPlaying()) {
+            val power = getSystemService(Context.POWER_SERVICE) as PowerManager
+            if (selectedEvent && power.isInteractive &&
+                !GamePreviewStore.isLocked && Prefs.isEnabled(this)) {
                 val now = android.os.SystemClock.elapsedRealtime()
                 if (now - lastCocoonNodeReadAt > 75L) {
                     lastCocoonNodeReadAt = now
