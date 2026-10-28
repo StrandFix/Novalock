@@ -52,6 +52,41 @@ object CocoonArtworkStore {
             .replace(Regex("[^a-z0-9]+"), " ")
             .trim().replace(Regex("\\s+"), " ")
 
+    /**
+     * Cocoon art exports may append "cocoon edit 48 <image-hash>" to every
+     * *filename*. Those are image variants, not separate games. Preserve the
+     * game title/region, while stripping only generated suffixes.
+     */
+    internal fun gameKey(rawTitle: String): String {
+        var key = normalizeTitle(rawTitle)
+        key = key.replace(
+            Regex(" (?:cocoon )?edit [0-9]{1,4} [0-9a-f]{12,}$"), "")
+        key = key.replace(
+            Regex(" cocoon [0-9]{1,4} [0-9a-f]{12,}$"), "")
+        key = key.replace(
+            Regex(" [0-9a-f]{24,}$"), "")
+        return key.trim()
+    }
+
+    private val genericFolderNames = setOf(
+        "cocoon", "edit", "images", "image", "artwork", "art", "media",
+        "hero", "heroes", "icon", "icons", "logo", "logos", "cover",
+        "covers", "grid", "grids", "boxart", "backgrounds", "background"
+    )
+
+    private fun canonicalGameKey(basename: String, directoryPath: List<String>): String {
+        val fromFile = gameKey(basename)
+        if (fromFile.length >= 3 && !fromFile.matches(Regex("[0-9a-f]{12,}")) &&
+            fromFile !in genericFolderNames && !fromFile.matches(Regex("[0-9 ]+"))) {
+            return fromFile
+        }
+        return directoryPath.asReversed().map(::gameKey).firstOrNull { candidate ->
+            candidate.length >= 3 && candidate !in genericFolderNames &&
+                !candidate.matches(Regex("[0-9a-f]{12,}")) &&
+                !candidate.matches(Regex("[0-9 ]+"))
+        } ?: fromFile
+    }
+
     /** Called only for Cocoon-provided Accessibility click/focus labels. */
     fun observeCocoonSelection(context: Context, texts: List<String>) {
         if (Prefs.cocoonImageMode(context) == Prefs.COCOON_MODE_LIVE) return
@@ -181,7 +216,7 @@ object CocoonArtworkStore {
             "Novalock Cocoon artwork diagnostics",
             "Mode: ${Prefs.cocoonImageMode(context)}",
             "Folder selected: ${selectedFolder(context)}",
-            "Artwork titles in index: ${index.size}",
+            "Canonical game keys in index: ${index.size}",
             "Example indexed keys: $indexedExamples",
             "Last Cocoon labels: $lastCocoonLabels",
             "Last emulator labels: $lastEmulatorLabels",
@@ -251,9 +286,12 @@ object CocoonArtworkStore {
             var count = 0
             var message: String
             val mutable = mutableMapOf<String, MutableMap<String, Artwork>>()
+            // Keep ALL image variants in visual comparison, but group their
+            // filename hashes under a single canonical game identity.
+            val allVisualArt = ArrayList<CocoonVisualMatcher.ArtworkReference>()
             try {
                 val root = DocumentsContract.getTreeDocumentId(tree)
-                fun walk(folderId: String, depth: Int, parent: String) {
+                fun walk(folderId: String, depth: Int, directoryPath: List<String>) {
                     if (depth > MAX_DEPTH || count >= MAX_IMAGES) return
                     val children = DocumentsContract.buildChildDocumentsUriUsingTree(tree, folderId)
                     val columns = arrayOf(
@@ -270,13 +308,14 @@ object CocoonArtworkStore {
                             val name = cursor.getString(nameCol) ?: continue
                             val mime = cursor.getString(typeCol) ?: ""
                             if (mime == DocumentsContract.Document.MIME_TYPE_DIR) {
-                                walk(id, depth + 1, name)
+                                walk(id, depth + 1, directoryPath + name)
                             } else {
                                 val ext = name.substringAfterLast('.', "").lowercase()
                                 if (ext !in assetExtensions) continue
                                 count++
                                 val basename = name.substringBeforeLast('.')
-                                val source = (parent + " " + basename).lowercase()
+                                val source = (directoryPath.joinToString(" ") + " " +
+                                    basename).lowercase()
                                 val kind = when {
                                     Regex("(^|[^a-z])hero(?:es)?([^a-z]|$)").containsMatchIn(source) -> "hero"
                                     Regex("(^|[^a-z])logos?([^a-z]|$)").containsMatchIn(source) -> "logo"
@@ -285,21 +324,20 @@ object CocoonArtworkStore {
                                 }
                                 val stripped = basename
                                     .replace(Regex("(?i)([_\\- ](?:hero|logo|icon|cover|grid|art|image))+$"), "")
-                                val key = normalizeTitle(
-                                    if (stripped.equals(kind, ignoreCase = true) ||
-                                        stripped.length < 3) parent else stripped)
-                                // Numeric IDs are common in scraped media. They
-                                // cannot match a text title but can match pixels.
+                                val key = canonicalGameKey(stripped, directoryPath)
                                 if (key.length < 3) continue
                                 val uri = DocumentsContract.buildDocumentUriUsingTree(tree, id)
                                 val entry = mutable.getOrPut(key) { mutableMapOf() }
-                                // First matching image is retained to avoid rotating randomly.
                                 if (kind !in entry) entry[kind] = Artwork(uri, kind)
+                                // Multiple edit hashes now share the SAME gameKey.
+                                // Competing images of one title are not different games.
+                                allVisualArt.add(
+                                    CocoonVisualMatcher.ArtworkReference(key, kind, uri))
                             }
                         }
                     }
                 }
-                walk(root, 0, "")
+                walk(root, 0, emptyList())
                 synchronized(lock) {
                     index = mutable.mapValues { it.value.toMap() }
                     selectedTitle = null
@@ -308,12 +346,7 @@ object CocoonArtworkStore {
                     clearCached()
                     indexedExamples = index.keys.sorted().take(12).joinToString(" | ").take(380)
                 }
-                val visualReferences = mutable.flatMap { (key, variants) ->
-                    variants.values.map { art ->
-                        CocoonVisualMatcher.ArtworkReference(key, art.kind, art.imageUri)
-                    }
-                }
-                CocoonVisualMatcher.rebuild(app, visualReferences)
+                CocoonVisualMatcher.rebuild(app, allVisualArt)
                 message = "Indexed ${index.size} artwork keys from $count image files; building visual matches"
             } catch (e: Exception) {
                 message = "Cannot read folder: ${e.javaClass.simpleName}. Select the Cocoon data folder."
