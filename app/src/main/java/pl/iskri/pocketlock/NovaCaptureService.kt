@@ -98,16 +98,29 @@ class NovaCaptureService : AccessibilityService() {
                                     buffer, result.colorSpace)
                                 val copy = hardware?.copy(Bitmap.Config.ARGB_8888, false)
                                     ?: return
+                                // OCR needs readable letters. Preserve up
+                                // to 960px instead of using the 480px dHash
+                                // thumbnail. Both consumers own/recycle their
+                                // own copies asynchronously.
                                 val edge = maxOf(copy.width, copy.height)
-                                val thumb = if (edge > 480) {
-                                    val ratio = 480f / edge
+                                val ocrFrame = if (edge > 960) {
+                                    val ratio = 960f / edge
                                     Bitmap.createScaledBitmap(copy,
                                         (copy.width * ratio).toInt().coerceAtLeast(1),
                                         (copy.height * ratio).toInt().coerceAtLeast(1),
                                         true).also { copy.recycle() }
                                 } else copy
-                                CocoonVisualMatcher.matchFrame(this@NovaCaptureService, thumb) {
-                                        key, _, _ ->
+                                val currentEdge = maxOf(ocrFrame.width, ocrFrame.height)
+                                val visualFrame = if (currentEdge > 480) {
+                                    val ratio = 480f / currentEdge
+                                    Bitmap.createScaledBitmap(ocrFrame,
+                                        (ocrFrame.width * ratio).toInt().coerceAtLeast(1),
+                                        (ocrFrame.height * ratio).toInt().coerceAtLeast(1), true)
+                                } else ocrFrame.copy(Bitmap.Config.ARGB_8888, false)
+                                CocoonTitleRecognizer.scanCocoonFrame(
+                                    this@NovaCaptureService, ocrFrame)
+                                CocoonVisualMatcher.matchFrame(
+                                    this@NovaCaptureService, visualFrame) { key, _, _ ->
                                     CocoonArtworkStore.observeVisualMatch(
                                         this@NovaCaptureService, key)
                                 }
