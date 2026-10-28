@@ -19,14 +19,10 @@ class CocoonTitleMatchingTest {
     }
     @Test fun editHashDoesNotChangeGameIdentity() {
         assertEquals(
-            "adventure island part ii the europe",
+            "adventure island part ii",
             CocoonArtworkStore.gameTitleStem(
                 "Adventure Island Part II (The) (Europe) Cocoon Edit 48 158fc3748a834230a8b55e215558dd7c"
-            ).let {
-                // "The" before region is display metadata rather than the
-                // region name itself, so both raw forms must resolve alike.
-                it
-            }
+            )
         )
     }
     @Test fun differentGamesNeverHaveSameStem() {
