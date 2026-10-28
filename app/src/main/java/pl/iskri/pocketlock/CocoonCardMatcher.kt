@@ -44,7 +44,7 @@ object CocoonCardMatcher {
     // Mean RGB error across 18x18 pixels. Require a clear winner over the
     // SECOND DISTINCT GAME, never a match merely to any similarly colored
     // platform icon.
-    private const val MAX_ERROR = 25
+    private const val MAX_ERROR = 30
     private const val MIN_MARGIN = 9
 
     fun rebuild(context: Context, images: List<ArtworkRef>) {
@@ -100,7 +100,7 @@ object CocoonCardMatcher {
                         try {
                             val pixels = downsample(source, Rect(0, 0, source.width, source.height))
                             val variance = variance(pixels)
-                            if (variance >= 120) {
+                            if (variance >= 18) {
                                 found.add(Descriptor(art.gameKey, art.category, pixels, variance))
                             }
                         } finally {
@@ -187,7 +187,7 @@ object CocoonCardMatcher {
                     )
                     if (rect.width() < 24 || rect.height() < 24) null
                     else downsample(frame, rect)
-                }.filter { variance(it) >= 120 }
+                }.filter { variance(it) >= 18 }
                 if (visible.isEmpty()) {
                     lastMatch = "Focused node has no distinctive image texture"
                     return@Thread
