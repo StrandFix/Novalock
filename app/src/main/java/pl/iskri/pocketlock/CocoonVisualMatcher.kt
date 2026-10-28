@@ -40,6 +40,8 @@ object CocoonVisualMatcher {
     private const val MAX_VISUAL_ARTWORK = 3500
     private const val MAX_STRICT_DISTANCE = 15
     private const val MIN_WINNER_MARGIN = 6
+    @Volatile private var lastCandidateReport = "No candidate tested"
+    fun lastCandidates(): String = lastCandidateReport
 
     fun rebuild(context: Context, images: List<ArtworkReference>) {
         if (!building.compareAndSet(false, true)) return
@@ -148,16 +150,23 @@ object CocoonVisualMatcher {
                     val old = winners[item.gameKey]
                     if (old == null || distance < old) winners[item.gameKey] = distance
                 }
-                val sorted = winners.entries.sortedBy { it.value }
+                // Only compare DIFFERENT canonical games. Multiple edit
+                // hashes, screenshots and cover variants of one game share a
+                // key and must never be treated as competing titles.
+                val sorted = winners.entries.sortedWith(
+                    compareBy<Map.Entry<String, Int>> { it.value }.thenBy { it.key })
                 val first = sorted.firstOrNull() ?: return@Thread
-                val second = sorted.getOrNull(1)?.value ?: 64
+                val runnerUp = sorted.getOrNull(1)
+                val second = runnerUp?.value ?: 64
+                lastCandidateReport = "best=${first.key} (${first.value}), " +
+                    "next=${runnerUp?.key ?: "none"} ($second)"
                 if (first.value <= MAX_STRICT_DISTANCE &&
                     second - first.value >= MIN_WINNER_MARGIN &&
                     pm.isInteractive && !GamePreviewStore.isLocked) {
-                    report = "Unique visual match: ${first.key} score=${first.value}, next=$second"
+                    report = "Unique game match: ${first.key} score=${first.value}, next=$second"
                     onIdentified(first.key, first.value, second)
                 } else {
-                    report = "No reliable visual match (closest=${first.value}, next=$second)"
+                    report = "Ambiguous visual match: $lastCandidateReport"
                 }
             } catch (e: Exception) {
                 report = "Visual comparison failed: ${e.javaClass.simpleName}"
