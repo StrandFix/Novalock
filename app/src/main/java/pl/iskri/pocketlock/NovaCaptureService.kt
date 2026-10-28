@@ -13,8 +13,10 @@ import android.graphics.Rect
 import android.os.Handler
 import android.os.Looper
 import android.os.PowerManager
+import android.os.SystemClock
 import android.util.Log
 import android.view.Display
+import android.view.KeyEvent
 import android.view.WindowManager
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
@@ -30,6 +32,8 @@ class NovaCaptureService : AccessibilityService() {
     companion object {
         private const val APP_SWITCH_DELAY_MS = 1_600L
         private const val MAX_PREVIEW_EDGE_PX = 760f
+        private const val LAUNCH_CAPTURE_DELAY_MS = 90L
+        private const val MIN_LAUNCH_INTERVAL_MS = 1_000L
 
         @Volatile var isConnected: Boolean = false
             private set
@@ -57,6 +61,101 @@ class NovaCaptureService : AccessibilityService() {
     private var focusedCardTask: Runnable? = null
     private var lastFocusedBounds = Rect()
     private var lastFocusedAt = 0L
+    private var transitionCaptureBusy = false
+    private var transitionEpoch = 0L
+    private var lastLaunchInputAt = 0L
+    private var transitionTask: Runnable? = null
+
+    /**
+     * Cocoon does not expose its Flutter/game cards as Android focus nodes on
+     * this device. Capture only after a real launch input, never by polling
+     * the HOME grid. A dark, isolated icon is still required by the matcher.
+     */
+    private fun requestLaunchTransitionCapture(delayMs: Long = LAUNCH_CAPTURE_DELAY_MS) {
+        if (!Prefs.isEnabled(this) ||
+            Prefs.cocoonImageMode(this) == Prefs.COCOON_MODE_LIVE ||
+            !CocoonArtworkStore.selectedFolder(this) || GamePreviewStore.isLocked ||
+            !NovaAppKinds.isCocoon(this, GamePreviewStore.currentPackage)) return
+        val pm = getSystemService(Context.POWER_SERVICE) as PowerManager
+        if (!pm.isInteractive) return
+        val now = SystemClock.elapsedRealtime()
+        if (now - lastLaunchInputAt < MIN_LAUNCH_INTERVAL_MS) return
+        lastLaunchInputAt = now
+        transitionEpoch += 1L
+        val epoch = transitionEpoch
+        transitionTask?.let(handler::removeCallbacks)
+        CocoonCardMatcher.ensureBuilt(this)
+        CocoonCardMatcher.noteTransitionAttempt("Launch input received; waiting for frame")
+        val task = Runnable {
+            if (transitionCaptureBusy || transitionEpoch != epoch ||
+                GamePreviewStore.isLocked || !pm.isInteractive) return@Runnable
+            transitionCaptureBusy = true
+            try {
+                takeScreenshot(Display.DEFAULT_DISPLAY, mainExecutor,
+                    object : TakeScreenshotCallback {
+                        override fun onSuccess(result: ScreenshotResult) {
+                            transitionCaptureBusy = false
+                            val buffer = result.hardwareBuffer
+                            try {
+                                if (transitionEpoch != epoch || GamePreviewStore.isLocked ||
+                                    !pm.isInteractive) return
+                                val hardware = Bitmap.wrapHardwareBuffer(
+                                    buffer, result.colorSpace)
+                                val frame = hardware?.copy(Bitmap.Config.ARGB_8888, false)
+                                if (frame == null) {
+                                    CocoonCardMatcher.noteTransitionAttempt(
+                                        "Launch frame could not be decoded")
+                                    return
+                                }
+                                val capturedAt = SystemClock.elapsedRealtime()
+                                CocoonCardMatcher.matchLaunchTransition(frame) { match ->
+                                    if (transitionEpoch == epoch && !GamePreviewStore.isLocked)
+                                        CocoonArtworkStore.observeLaunchTransitionImage(
+                                            this@NovaCaptureService, match.gameKey,
+                                            match.score, match.secondScore, capturedAt)
+                                }
+                            } catch (e: Exception) {
+                                CocoonCardMatcher.noteTransitionAttempt(
+                                    "Launch frame failed: ${e.javaClass.simpleName}")
+                                Log.d("NovaLaunch", "Launch screenshot failed", e)
+                            } finally {
+                                buffer.close()
+                            }
+                        }
+
+                        override fun onFailure(errorCode: Int) {
+                            transitionCaptureBusy = false
+                            CocoonCardMatcher.noteTransitionAttempt(
+                                "Android launch screenshot error=$errorCode")
+                        }
+                    })
+            } catch (e: Exception) {
+                transitionCaptureBusy = false
+                CocoonCardMatcher.noteTransitionAttempt(
+                    "Launch capture request failed: ${e.javaClass.simpleName}")
+            }
+        }
+        transitionTask = task
+        handler.postDelayed(task, delayMs)
+    }
+
+    override fun onKeyEvent(event: KeyEvent): Boolean {
+        // Observe but never consume Retroid controller input. Cocoon and every
+        // emulator retain their original button handling.
+        if (event.action == KeyEvent.ACTION_UP && event.repeatCount == 0 &&
+            event.keyCode in intArrayOf(
+                KeyEvent.KEYCODE_BUTTON_A, KeyEvent.KEYCODE_BUTTON_B,
+                KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER,
+                KeyEvent.KEYCODE_NUMPAD_ENTER, KeyEvent.KEYCODE_SPACE
+            )) requestLaunchTransitionCapture()
+        return false
+    }
+
+    private fun invalidateLaunchCapture() {
+        transitionEpoch += 1L
+        transitionTask?.let(handler::removeCallbacks)
+        transitionTask = null
+    }
 
     private fun captureFocusedCocoonCard(event: AccessibilityEvent) {
         cardFocusId += 1L
@@ -324,6 +423,7 @@ class NovaCaptureService : AccessibilityService() {
                     Intent.ACTION_SCREEN_OFF -> {
                         handler.removeCallbacks(sampler)
                         invalidateCardCapture()
+                        invalidateLaunchCapture()
                     }
                     Intent.ACTION_SCREEN_ON -> if (!GamePreviewStore.isLocked)
                         scheduleCapture(APP_SWITCH_DELAY_MS)
@@ -346,6 +446,8 @@ class NovaCaptureService : AccessibilityService() {
         if (!NovaAppKinds.isSafeApp(pkg)) return
         if (NovaAppKinds.isCocoon(this, pkg)) {
             CocoonArtworkStore.ensureIndexed(this)
+            if (event.eventType == AccessibilityEvent.TYPE_VIEW_CLICKED)
+                requestLaunchTransitionCapture()
             val focusEvent = event.eventType == AccessibilityEvent.TYPE_VIEW_FOCUSED ||
                 event.eventType == AccessibilityEvent.TYPE_VIEW_SELECTED ||
                 event.eventType == AccessibilityEvent.TYPE_VIEW_CLICKED ||
@@ -359,6 +461,13 @@ class NovaCaptureService : AccessibilityService() {
         CocoonArtworkStore.observeEmulatorWindowTitle(
             this, pkg, event.text.map { it.toString() })
         val previous = GamePreviewStore.currentPackage
+        // If the controller key is not exposed by the device, a genuine
+        // Cocoon-to-emulator window switch is a secondary launch trigger.
+        // The dark isolated-icon check still decides whether it is useful.
+        if (NovaAppKinds.isCocoon(this, previous) &&
+            NovaAppKinds.isLikelyEmulator(this, pkg)) {
+            requestLaunchTransitionCapture(0L)
+        }
         GamePreviewStore.observeForeground(this, pkg)
         // No HOME screenshot scanning: only running-game previews.
         if (NovaAppKinds.isCocoon(this, pkg) ||
@@ -376,6 +485,7 @@ class NovaCaptureService : AccessibilityService() {
         isConnected = false
         handler.removeCallbacks(sampler)
         invalidateCardCapture()
+        invalidateLaunchCapture()
         receiver?.let {
             try { unregisterReceiver(it) } catch (_: Exception) {}
         }

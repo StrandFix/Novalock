@@ -10,6 +10,8 @@ import android.os.PowerManager
 import android.util.Log
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.math.abs
+import kotlin.math.max
+import kotlin.math.min
 
 /**
  * Standalone V6.10 prototype. Compares ONLY the actually focused Cocoon
@@ -38,6 +40,10 @@ object CocoonCardMatcher {
         private set
     @Volatile var lastMatch: String = "No focused card captured"
         private set
+    @Volatile var lastTransitionMatch: String = "No Cocoon launch frame captured"
+        private set
+    @Volatile var transitionAttempts: Int = 0
+        private set
 
     private const val GRID = 18
     private const val MAX_IMAGES = 3500
@@ -46,6 +52,146 @@ object CocoonCardMatcher {
     // platform icon.
     private const val MAX_ERROR = 30
     private const val MIN_MARGIN = 9
+
+    fun noteTransitionAttempt(note: String) {
+        if (note.startsWith("Launch input received")) transitionAttempts++
+        lastTransitionMatch = note
+    }
+
+    /**
+     * Experimental V6.11 path: a controller confirmation in Cocoon triggered
+     * this frame. Only an isolated image on a predominantly dark transition
+     * screen may be considered. An ordinary HOME screenshot must never match.
+     */
+    fun matchLaunchTransition(frame: Bitmap, onResult: (Result) -> Unit) {
+        if (!matching.compareAndSet(false, true)) {
+            frame.recycle()
+            lastTransitionMatch = "Another image comparison is still running"
+            return
+        }
+        val candidates = synchronized(guard) {
+            if (complete) fingerprints.toList() else emptyList()
+        }
+        if (candidates.isEmpty()) {
+            lastTransitionMatch = "Launch index unavailable: $status"
+            frame.recycle()
+            matching.set(false)
+            return
+        }
+        Thread({
+            try {
+                val isolated = findIsolatedTransitionArt(frame)
+                if (isolated == null) {
+                    lastTransitionMatch =
+                        "Launch screenshot captured, but no isolated icon on dark background"
+                    return@Thread
+                }
+                val probes = listOf(
+                    RectF(0f, 0f, 1f, 1f),
+                    RectF(.03f, .03f, .97f, .97f),
+                    RectF(.07f, .07f, .93f, .93f),
+                    RectF(.10f, .10f, .90f, .90f)
+                ).mapNotNull { part ->
+                    val crop = Rect(
+                        (isolated.left + part.left * isolated.width()).toInt(),
+                        (isolated.top + part.top * isolated.height()).toInt(),
+                        (isolated.left + part.right * isolated.width()).toInt(),
+                        (isolated.top + part.bottom * isolated.height()).toInt()
+                    )
+                    if (crop.width() < 24 || crop.height() < 24) null
+                    else downsample(frame, crop)
+                }.filter { variance(it) >= 18 }
+                if (probes.isEmpty()) {
+                    lastTransitionMatch = "Isolated launch region has no distinct image texture"
+                    return@Thread
+                }
+                val grouped = HashMap<String, Int>()
+                for (candidate in candidates) {
+                    val error = probes.minOf { colorError(it, candidate.pixels) }
+                    val previous = grouped[candidate.gameKey]
+                    if (previous == null || error < previous)
+                        grouped[candidate.gameKey] = error
+                }
+                val ranked = grouped.entries.sortedWith(
+                    compareBy<Map.Entry<String, Int>> { it.value }.thenBy { it.key })
+                val winner = ranked.firstOrNull() ?: return@Thread
+                val runner = ranked.getOrNull(1)
+                val nextScore = runner?.value ?: 255
+                lastTransitionMatch = "Dark launch icon ${isolated.flattenToString()}: " +
+                    "best=${winner.key} (${winner.value}), " +
+                    "next=${runner?.key ?: "none"} ($nextScore)"
+                if (winner.value <= MAX_ERROR && nextScore - winner.value >= MIN_MARGIN) {
+                    onResult(Result(winner.key, winner.value, nextScore))
+                } else {
+                    lastTransitionMatch += " — rejected (not distinctive enough)"
+                }
+            } catch (e: Exception) {
+                lastTransitionMatch = "Launch image comparison failed: ${e.javaClass.simpleName}"
+                Log.d("NovalockLaunch", "Transition frame comparison", e)
+            } finally {
+                frame.recycle()
+                matching.set(false)
+            }
+        }, "Novalock-Launch-Match").start()
+    }
+
+    /**
+     * Cheap, conservative shape test: an artwork-like region near the screen
+     * center surrounded by a dark field. No whole-screen HOME tile matching.
+     */
+    private fun findIsolatedTransitionArt(frame: Bitmap): Rect? {
+        val width = frame.width
+        val height = frame.height
+        if (width < 320 || height < 240) return null
+        val step = (min(width, height) / 170).coerceAtLeast(3)
+        var edgeCount = 0
+        var darkEdges = 0
+        var contentCount = 0
+        var minX = width
+        var minY = height
+        var maxX = 0
+        var maxY = 0
+        for (y in 0 until height step step) {
+            for (x in 0 until width step step) {
+                val rgb = frame.getPixel(x, y)
+                val red = (rgb shr 16) and 255
+                val green = (rgb shr 8) and 255
+                val blue = rgb and 255
+                val light = (red * 3 + green * 6 + blue) / 10
+                if (x < width * .14f || x > width * .86f ||
+                    y < height * .10f || y > height * .90f) {
+                    edgeCount++
+                    if (light < 70) darkEdges++
+                }
+                if (x in (width * .16f).toInt()..(width * .84f).toInt() &&
+                    y in (height * .12f).toInt()..(height * .88f).toInt() &&
+                    light >= 62) {
+                    contentCount++
+                    minX = min(minX, x)
+                    minY = min(minY, y)
+                    maxX = max(maxX, x)
+                    maxY = max(maxY, y)
+                }
+            }
+        }
+        if (edgeCount == 0 || darkEdges * 100 < edgeCount * 88 ||
+            contentCount < 18 || maxX <= minX || maxY <= minY) return null
+        val contentWidth = maxX - minX
+        val contentHeight = maxY - minY
+        if (contentWidth < width * .075f || contentHeight < height * .075f ||
+            contentWidth > width * .66f || contentHeight > height * .75f) return null
+        val centerX = (minX + maxX) / 2f
+        val centerY = (minY + maxY) / 2f
+        if (centerX !in width * .30f..width * .70f ||
+            centerY !in height * .28f..height * .72f) return null
+        val padding = max(step * 2, (max(contentWidth, contentHeight) * .05f).toInt())
+        return Rect(
+            (minX - padding).coerceAtLeast(0),
+            (minY - padding).coerceAtLeast(0),
+            (maxX + padding).coerceAtMost(width),
+            (maxY + padding).coerceAtMost(height)
+        )
+    }
 
     fun rebuild(context: Context, images: List<ArtworkRef>) {
         val unique = images.distinctBy { it.uri.toString() }.take(MAX_IMAGES)

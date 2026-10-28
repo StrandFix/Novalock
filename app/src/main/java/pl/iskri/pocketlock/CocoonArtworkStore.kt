@@ -299,12 +299,28 @@ object CocoonArtworkStore {
         }
     }
 
-    /**
-     * Strong, unique pixel match from the actual focused Cocoon card only.
-     * This does NOT choose artwork from unrelated HOME tiles.
-     */
+    /** Strong, unique pixel match from a real focused Cocoon card. */
     fun observeFocusedGameImage(
         context: Context, key: String, score: Int, next: Int, capturedAt: Long
+    ) = observeVisualGameImage(
+        context, key, score, next, capturedAt,
+        "FOCUSED_CARD_IMAGE", "Focused Cocoon card"
+    )
+
+    /**
+     * Strong pixel match from a dark, isolated launch frame captured after a
+     * Cocoon confirmation input. The matcher must NOT select a HOME grid tile.
+     */
+    fun observeLaunchTransitionImage(
+        context: Context, key: String, score: Int, next: Int, capturedAt: Long
+    ) = observeVisualGameImage(
+        context, key, score, next, capturedAt,
+        "COCOON_LAUNCH_FRAME", "Cocoon launch icon"
+    )
+
+    private fun observeVisualGameImage(
+        context: Context, key: String, score: Int, next: Int,
+        capturedAt: Long, source: String, sourceLabel: String
     ) {
         if (GamePreviewStore.isLocked || Prefs.cocoonImageMode(context) == Prefs.COCOON_MODE_LIVE)
             return
@@ -316,12 +332,13 @@ object CocoonArtworkStore {
             if (now - capturedAt !in 0L..4000L) return
             pendingCocoonGame = key
             pendingCocoonAt = capturedAt
-            lastCocoonSelectionEvent = "FOCUSED_CARD_IMAGE"
-            lastCocoonSelectionMatch = "Game card matched: $key (score $score, runner $next)"
+            lastCocoonSelectionEvent = source
+            lastCocoonSelectionMatch =
+                "$sourceLabel matched: $key (score $score, runner $next)"
             lastDecision = lastCocoonSelectionMatch
-            status = "Cocoon focused card recognized: $key"
-            // Matcher may finish just AFTER a fast game launch. The source
-            // screenshot is verified Cocoon; allow this short-late result to
+            status = "$sourceLabel recognized: $key"
+            // Matching may finish just AFTER a fast game launch. Source is
+            // either a focused card or a confirmed dark launch transition;
             // bind only to an actual emulator, never a browser or HOME.
             val pkg = GamePreviewStore.currentPackage
             if (pkg != null && NovaAppKinds.isLikelyEmulator(context, pkg) &&
@@ -334,7 +351,7 @@ object CocoonArtworkStore {
                     load = Triple(key, pkg, generation)
                     pendingCocoonGame = null
                     pendingCocoonAt = 0L
-                    lastDecision = "Focused Cocoon artwork bound after emulator launch: $key"
+                    lastDecision = "$sourceLabel artwork bound after emulator launch: $key"
                     status = "Loading selected game artwork: $key"
                 }
             }
@@ -351,6 +368,8 @@ object CocoonArtworkStore {
         synchronized(lock) {
             if (NovaAppKinds.isCocoon(context, packageName)) {
                 resetAssignmentLocked()
+                pendingCocoonGame = null
+                pendingCocoonAt = 0L
                 status = "Cocoon HOME; awaiting emulator game launch"
                 return
             }
@@ -591,6 +610,8 @@ object CocoonArtworkStore {
             "Focused-node bounds: $focusCoordinates",
             "Focused image index: ${CocoonCardMatcher.status}",
             "Focused image match: ${CocoonCardMatcher.lastMatch}",
+            "Launch-confirmation inputs: ${CocoonCardMatcher.transitionAttempts}",
+            "Launch-transition screenshot: ${CocoonCardMatcher.lastTransitionMatch}",
             "Last Cocoon selection event: $lastCocoonSelectionEvent",
             "Selected-node text: $lastCocoonSelectionLabels",
             "Selected-node result: $lastCocoonSelectionMatch",
@@ -603,7 +624,7 @@ object CocoonArtworkStore {
             "Loaded image: ${imageTitle ?: "(none)"}",
             "Decision: $lastDecision",
             "Status: $status",
-            "Source: emulator title OR uniquely matched focused Cocoon card (no global HOME guessing)"
+            "Source: emulator title, verified focused card, or isolated launch icon (no global HOME guessing)"
         ).joinToString("\n")
     }
 }
