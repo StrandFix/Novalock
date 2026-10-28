@@ -424,7 +424,7 @@ class SetupActivity : Activity() {
         findViewById<TextView>(R.id.tvCocoonArtStatus)?.text =
             if (!CocoonArtworkStore.selectedFolder(this)) {
                 "No folder linked. Select the data folder configured in Cocoon."
-            } else CocoonArtworkStore.status + "\n" + CocoonVisualMatcher.report
+            } else CocoonArtworkStore.status
     }
 
     private fun setTab(newTab: Int) {
