@@ -24,7 +24,8 @@ import java.util.concurrent.atomic.AtomicBoolean
 object CocoonVisualMatcher {
     data class ArtworkReference(val gameKey: String, val category: String, val uri: Uri)
     private data class Fingerprint(
-        val gameKey: String, val category: String, val landscape: Long, val square: Long
+        val gameKey: String, val category: String,
+        val landscape: Long, val fourByThree: Long, val square: Long
     )
 
     private val lock = Any()
@@ -74,6 +75,7 @@ object CocoonVisualMatcher {
                             out.add(Fingerprint(
                                 image.gameKey, image.category,
                                 visualHash(bitmap, RectF(0f, 0f, 1f, 1f), 16f / 9f),
+                                visualHash(bitmap, RectF(0f, 0f, 1f, 1f), 4f / 3f),
                                 visualHash(bitmap, RectF(0f, 0f, 1f, 1f), 1f)
                             ))
                         } finally {
@@ -122,15 +124,17 @@ object CocoonVisualMatcher {
                     RectF(.26f, .14f, .74f, .86f)
                 )
                 val screen = windows.map { area ->
-                    visualHash(frame, area, 16f / 9f) to
-                        visualHash(frame, area, 1f)
+                    Triple(visualHash(frame, area, 16f / 9f),
+                        visualHash(frame, area, 4f / 3f),
+                        visualHash(frame, area, 1f))
                 }
                 val winners = HashMap<String, Int>()
                 for (item in signaturesCopy) {
                     val distance = screen.minOf { hashes ->
                         minOf(
                             java.lang.Long.bitCount(hashes.first xor item.landscape),
-                            java.lang.Long.bitCount(hashes.second xor item.square)
+                            java.lang.Long.bitCount(hashes.second xor item.fourByThree),
+                            java.lang.Long.bitCount(hashes.third xor item.square)
                         )
                     }
                     val old = winners[item.gameKey]
